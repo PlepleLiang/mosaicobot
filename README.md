@@ -1,6 +1,6 @@
 # MosaicoBot
 
-内部参赛项目：Android 手机端负责创作、保存与部署 Lua Works，Mosaico 设备负责本地执行、系统应用与横屏手柄交互。
+：Android 手机端负责创作、保存与部署 Lua Works，Mosaico 设备负责本地执行、系统应用与横屏手柄交互。
 
 ## 展示与体验网站
 
