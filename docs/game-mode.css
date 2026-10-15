@@ -16,6 +16,14 @@
 .gp-review-header h2 { font-size:27px; line-height:1.5; margin:8px 0 4px; font-weight:650; }
 .gp-review-header p { margin:0; font-size:12px; color:#677361; }
 .gp-review-header button,.gp-rotate button { min-height:48px; padding:10px 18px; border:1px solid #a4b198; border-radius:24px; background:transparent; color:#3b4f35; }
+.gp-screen-stage { margin:0 auto 28px; text-align:center; }
+.gp-screen-shell { position:relative; width:min(360px,100%); margin:auto; padding:10px; border:1px solid #c2cbb7; border-radius:44px; background:#f9faf2; box-shadow:0 0 0 3px #dde1d5,0 18px 36px -24px #263d3659; }
+.gp-screen-shell::after { content:''; position:absolute; width:72px; height:24px; left:calc(50% - 36px); bottom:-25px; border:1px solid #c2cbb7; border-bottom:0; border-radius:12px 12px 0 0; background:#e2e7da; }
+#gp-screen { display:block; width:100%; aspect-ratio:1; border-radius:34px; background:#111713; }
+.gp-screen-badge { position:absolute; top:22px; left:50%; transform:translateX(-50%); padding:4px 9px; border:1px solid #bac7ad33; border-radius:5px; background:#202923; color:#bdc9b4; font:9px/1.4 Consolas,monospace; white-space:nowrap; }
+.gp-screen-stage figcaption { margin:16px auto 0; }
+.gp-screen-stage p { margin:5px 0; font-size:12px; color:#405638; }
+.gp-screen-stage small { font-size:10px; color:#677361; }
 .gp-landscape-frame { padding:8px; border:1px solid #626b5e; border-radius:40px; background:#343b34; box-shadow:0 0 0 2px #bbc3b2,0 20px 48px -22px #253c3659; }
 #gp-controller { position:relative; isolation:isolate; background:var(--gp-bg); color:var(--gp-text); border-radius:32px; padding:16px 32px 26px; min-height:412px; display:flex; flex-direction:column; overflow:hidden; }
 #gp-controller::after { content:''; position:absolute; bottom:8px; width:110px; height:4px; background:#b9c2b2; border-radius:4px; left:calc(50% - 55px); }
@@ -85,7 +93,9 @@
 #gp-device-confirm { min-height:48px; padding:8px 16px; margin-top:8px; background:#31452c; color:white; border:0; border-radius:10px; }
 .gp-rotate { display:none; }
 @media (max-width:950px) and (orientation:landscape) {
-  #game-mode { padding:0; background:var(--gp-bg); }
+  #game-mode { padding:16px 0 0; background:#f0f1e9; }
+  .gp-screen-shell { width:280px; }
+  .gp-screen-stage { margin-bottom:24px; }
   .gp-review-header { display:none; }
   .gp-landscape-frame { padding:0; border:0; border-radius:0; box-shadow:none; }
   #gp-controller { border-radius:0; min-height:100dvh; padding:8px max(16px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left)); }
@@ -111,6 +121,6 @@
   .gp-rotate h3 { font-size:24px; margin:24px 0 12px; }
   .gp-rotate p { font-size:12px; line-height:1.9; color:#637259; }
   .gp-rotate button { margin-top:16px; }
-  .gp-landscape-frame,.gp-review-tools { display:none; }
+  .gp-screen-stage,.gp-landscape-frame,.gp-review-tools { display:none; }
 }
 @media (prefers-reduced-motion:reduce) { #game-mode * { transition:none !important; animation:none !important; } }

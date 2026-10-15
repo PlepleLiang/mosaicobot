@@ -556,9 +556,13 @@
     <dialog id="game-mode" aria-labelledby="game-review-title">
       <div class="gp-review-header"><div><span>09 / UNIVERSAL CONTROLLER</span><h2 id="game-review-title">一个手柄，交给游戏定义。</h2><p>交互预览 · 首版已实现，网页不连接真实设备</p></div><button id="gp-close-review" aria-label="关闭游戏模式预览">关闭预览 ×</button></div>
       <div class="gp-rotate"><svg class="icon" aria-hidden="true"><use href="#i-game"/></svg><h3>横过来，双手开玩。</h3><p>原生 App 进入游戏模式后切换横屏。<br>网页预览请横放手机或加宽窗口，手柄不会被缩小。</p><button id="gp-portrait-exit">返回主设计稿</button></div>
+      <figure class="gp-screen-stage" aria-label="手柄上方的 Mosaico 本地模拟屏幕">
+        <div class="gp-screen-shell"><span class="gp-screen-badge">本地交互模拟</span><canvas id="gp-screen" width="480" height="480" aria-label="贪食蛇模拟屏幕，使用下方手柄操作"></canvas></div>
+        <figcaption><span class="gp-eyebrow">MOSAICO / THE BODY</span><p id="gp-game-status" role="status">方向键 / 左摇杆转向 · A / START 开始 · B 暂停</p><small>独立方屏 + 手机手柄 · 网页模拟，不是投屏或真实设备状态</small></figcaption>
+      </figure>
       <div class="gp-landscape-frame"><section id="gp-controller" aria-label="横屏通用游戏手柄"></section></div>
       <section class="gp-review-tools" aria-label="屏外评审工具，不属于手机 App">
-        <div class="gp-monitor"><span class="gp-eyebrow">MOSAICO / 输入观察台 · 本地模拟</span><h3 id="gp-observer-title">连接后，在 Mosaico 上选游戏</h3><p>这里仅观察标准输入，不运行模拟器、Lua 或 ROM。</p><output id="gp-observer">LX 0.00 · LY 0.00 / RX 0.00 · RY 0.00<br>BUTTONS / 全部释放</output></div>
+        <div class="gp-monitor"><span class="gp-eyebrow">MOSAICO / 输入观察台 · 本地模拟</span><h3 id="gp-observer-title">连接后，在 Mosaico 上选游戏</h3><p>上方贪食蛇为本地交互模拟，复用设计稿画面；不执行设备 Lua 或 ROM，不访问真实设备。</p><output id="gp-observer">LX 0.00 · LY 0.00 / RX 0.00 · RY 0.00<br>BUTTONS / 全部释放</output></div>
         <div class="gp-scenarios"><label for="gp-scenario">评审场景 · 不是真实设备状态</label><select id="gp-scenario"><option value="ready">自动连接 · 通道就绪</option><option value="offline">未连接 · 自动扫描与手动重试</option><option value="waiting_game">已连接 · 等待游戏运行</option><option value="unsupported">固件未接入通用手柄</option><option value="busy">手柄控制权被占用</option><option value="lost">连接中断</option><option value="background">退后台后返回</option><option value="reboot">设备重启 · 会话失效</option></select><p>方向键 / WASD：十字键；J/K/U/I：A/B/X/Y。摇杆可拖动，Tab 聚焦后用方向键调节、Space 回中。</p><a href="game-mode.md">阅读新版交互文档 ↗</a></div>
       </section>
     </dialog>

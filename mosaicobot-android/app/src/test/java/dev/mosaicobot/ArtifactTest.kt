@@ -48,6 +48,16 @@ class ArtifactTest {
     @Test fun missingYieldRejected() { assertThrows(IllegalArgumentException::class.java) { ArtifactValidator.validateLua(lua.replace("delay.delay_ms(33)", "")) } }
     @Test fun missingCloseRejected() { assertThrows(IllegalArgumentException::class.java) { ArtifactValidator.validateLua(lua.replace("screen:close()", "")) } }
     @Test fun largeSourceRejected() { assertThrows(IllegalArgumentException::class.java) { ArtifactValidator.validateLua(lua+"\n--"+"x".repeat(65536)) } }
+    @Test fun fontSizeLimitsMatchDevice() {
+        for (size in listOf(8, 64)) {
+            ArtifactValidator.validateLua(lua.replace("screen:text(20,20,\"Hello\")", "screen:text(20,20,\"Hello\",{font_size=$size})"))
+        }
+        for (size in listOf(7, 65, 100)) {
+            val code = lua.replace("screen:text(20,20,\"Hello\")", "screen:measure_text(\"25:00\",{font_size=$size})")
+            val error = assertThrows(IllegalArgumentException::class.java) { ArtifactValidator.validateLua(code) }
+            assertTrue(error.message.orEmpty().contains("8..64"))
+        }
+    }
     @Test fun versionRetainsIdentityAndChangesPackage() {
         val first=work();val second=ArtifactValidator.parse(response(),"慢一点",first)
         assertEquals(first.id,second.id);assertEquals(2,second.version);assertNotEquals(first.packageId,second.packageId)

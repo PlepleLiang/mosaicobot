@@ -1,4 +1,4 @@
-/* 09: universal landscape input prototype. No game, network or device execution. */
+/* 09: universal landscape controller with a local-only screen demo. */
 (() => {
   'use strict';
   const get=id=>document.getElementById(id), dialog=get('game-mode'), root=get('gp-controller');
@@ -10,6 +10,65 @@
   const axes={left:{x:0,y:0,pointer:null,keys:new Set()},right:{x:0,y:0,pointer:null,keys:new Set()}};
   const portrait=()=>matchMedia('(max-width:760px) and (orientation:portrait), (max-width:639px)').matches;
   const enabled=()=>dialog.open&&sessionValid&&status==='ready'&&!portrait();
+  const screen=get('gp-screen'), screenContext=screen.getContext('2d');
+  const demoWork={type:'snake',params:{color:'#b7dfa0'}};
+  let demo=null, demoTimer=null, previousKeys=new Set();
+  function resetDemo(){
+    demo={snake:[{x:7,y:7},{x:6,y:7},{x:5,y:7},{x:4,y:7},{x:4,y:8},{x:4,y:9}],direction:{x:1,y:0},next:{x:1,y:0},food:{x:11,y:5},score:0,started:false,paused:false,over:false,last:performance.now()};
+    drawDemo();
+  }
+  function drawDemo(){
+    if(!demo)return;
+    drawApp(screenContext,demoWork,demo);
+    screen.dataset.phase=demo.over?'over':demo.paused?'paused':demo.started?'running':'idle';
+    screen.dataset.head=demo.snake[0].x+','+demo.snake[0].y;
+    screen.dataset.score=demo.score;
+    const label=demo.over?'本局结束 · A / START 重新开始':demo.paused?'已暂停 · B 继续':demo.started?'方向键 / 左摇杆转向 · B 暂停':'方向键 / 左摇杆转向 · A / START 开始';
+    if(get('gp-game-status').textContent!==label)get('gp-game-status').textContent=label;
+    rounded(screenContext,0,422,480,32,0,'#111713');
+    text(screenContext,demo.over?'A / START 重新开始':demo.paused?'B 继续':'方向键 / 左摇杆控制',240,440,12,'#aab99f','center');
+    if(demo.over||demo.paused){
+      rounded(screenContext,80,246,320,28,0,'#111713');
+      text(screenContext,demo.over?'A / START 重新开始':'B 继续',240,263,13,'#b7c5b0','center');
+    }
+  }
+  function demoInput(keys){
+    if(!demo)return;
+    const fresh=k=>keys.has(k)&&!previousKeys.has(k);
+    if(enabled()){
+      if(fresh('a')||fresh('start')){if(demo.over)resetDemo();demo.started=true;demo.last=performance.now();}
+      if(fresh('b')&&demo.started&&!demo.over){demo.paused=!demo.paused;demo.last=performance.now();}
+      const direction=['up','down','left','right'].find(k=>keys.has(k));
+      const a=axes.left, analog=Math.max(Math.abs(a.x),Math.abs(a.y))>.3?(Math.abs(a.x)>Math.abs(a.y)?(a.x>0?'right':'left'):(a.y>0?'down':'up')):null;
+      const v={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}}[direction||analog];
+      if(v&&!demo.over&&!demo.paused&&!(v.x===-demo.direction.x&&v.y===-demo.direction.y)){demo.next=v;demo.started=true;}
+    }
+    previousKeys=keys;drawDemo();
+  }
+  function tickDemo(){
+    if(!dialog.open||document.hidden||portrait()||!demo)return;
+    const now=performance.now();
+    if(demo.started&&!demo.paused&&!demo.over&&now-demo.last>=260){
+      demo.last=now;demo.direction=demo.next;
+      const head={x:demo.snake[0].x+demo.direction.x,y:demo.snake[0].y+demo.direction.y};
+      const eating=head.x===demo.food.x&&head.y===demo.food.y;
+      const body=eating?demo.snake:demo.snake.slice(0,-1);
+      if(head.x<0||head.x>=16||head.y<0||head.y>=13||body.some(p=>p.x===head.x&&p.y===head.y))demo.over=true;
+      else{
+        demo.snake.unshift(head);
+        if(!eating)demo.snake.pop();
+        else{
+          demo.score++;
+          const free=[];
+          for(let x=0;x<16;x++)for(let y=0;y<13;y++)if(!demo.snake.some(p=>p.x===x&&p.y===y))free.push({x,y});
+          if(free.length)demo.food=free[Math.floor(Math.random()*free.length)];else demo.over=true;
+        }
+      }
+      // A held stick keeps steering after a game tick, without replaying action buttons.
+      demoInput(new Set(held.values()));
+    }
+    drawDemo();
+  }
   const key=k=>'<button class="gp-key" data-key="'+k+'" aria-label="'+(spoken[k]||names[k])+'" aria-pressed="false" '+(!enabled()?'disabled':'')+'>'+names[k]+'</button>';
   const btn=(action,label,primary=false)=>'<button data-gp-action="'+action+'" class="'+(primary?'gp-primary':'')+'">'+label+'</button>';
   function stick(side,label,click){return '<div class="gp-stick-group '+side+'"><div class="gp-stick" data-stick="'+side+'" tabindex="'+(enabled()?'0':'-1')+'" role="group" aria-disabled="'+!enabled()+'" aria-label="'+label+'，拖动控制；聚焦后方向键控制，空格回中"><span class="gp-stick-knob">'+label+'</span></div>'+key(click).replace('class="gp-key"','class="gp-key gp-click"')+'</div>';}
@@ -23,7 +82,7 @@
     get('gp-menu').onclick=()=>openState('menu');
     bindControls();
     if(status!=='ready')renderCover();
-    get('gp-observer-title').textContent=status==='ready'?'控制通道就绪 · 游戏状态未读取':'手机输入已释放 · 不代表游戏暂停';
+    get('gp-observer-title').textContent=status==='ready'?'控制通道就绪 · 上方为本地游戏演示':'手机输入已释放 · 不代表游戏暂停';
     update();
   }
   function renderCover(){
@@ -68,12 +127,13 @@
   }
   function enter(){
     origin=document.activeElement;status=state.connected?'reconnecting':'scanning';sessionValid=false;returnStatus='menu';
+    resetDemo();clearInterval(demoTimer);demoTimer=setInterval(tickDemo,80);
     dialog.showModal();document.body.style.overflow='hidden';render();
     if(status==='scanning')timer=setTimeout(()=>openState('offline'),650);
     else timer=setTimeout(()=>openState('ready'),600);
     if(portrait())get('gp-portrait-exit').focus({preventScroll:true});else if(status==='ready')get('gp-menu').focus({preventScroll:true});
   }
-  function close(){clearTimeout(timer);clearInput();dialog.close();document.body.style.overflow='';origin?.focus({preventScroll:true});}
+  function close(){clearTimeout(timer);clearInterval(demoTimer);demoTimer=null;clearInput();dialog.close();document.body.style.overflow='';origin?.focus({preventScroll:true});}
   function clearInput(){held.clear();pulseTimers.forEach(clearTimeout);pulseTimers.clear();Object.values(axes).forEach(a=>{a.x=a.y=0;a.pointer=null;a.keys.clear();});update();}
   function press(source,k){if(!enabled()||held.has(source))return;held.set(source,k);update();}
   function release(source){held.delete(source);update();}
@@ -82,6 +142,7 @@
     root.querySelectorAll('[data-key]').forEach(b=>b.setAttribute('aria-pressed',String(keys.has(b.dataset.key))));
     root.querySelectorAll('[data-stick]').forEach(s=>{const a=axes[s.dataset.stick];s.dataset.x=a.x.toFixed(2);s.dataset.y=a.y.toFixed(2);s.querySelector('.gp-stick-knob').style.transform='translate('+a.x*28+'px,'+a.y*28+'px)';});
     const fmt=n=>(Math.abs(n)<.005?0:n).toFixed(2);
+    demoInput(keys);
     get('gp-observer').innerHTML='LX '+fmt(axes.left.x)+' · LY '+fmt(axes.left.y)+' / RX '+fmt(axes.right.x)+' · RY '+fmt(axes.right.y)+'<br>BUTTONS / '+(keys.size?[...keys].map(k=>names[k]).join(' + '):'全部释放');
   }
   function bindControls(){

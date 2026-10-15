@@ -85,6 +85,7 @@ screen:stroke_circle(cx,cy,radius,color)
 screen:line(x0,y0,x1,y1,color)
 screen:text(x,y,"ASCII text",{font_size=24,color="#ffffff"}) -- 8..64
 local tw,th = screen:measure_text("text",{font_size=24})
+font_size MUST stay within 8..64 for BOTH text and measure_text, including large countdown digits. Use the same valid size for measuring and drawing; sizes such as 100 raise a device error, they are not clamped.
 screen:present() -- MUST present exactly once after each begin and drawing
 local touches = screen:touch().points -- { { id=number, x=number, y=number }, ... }; only when info.touch_available
 local now = system.millis()

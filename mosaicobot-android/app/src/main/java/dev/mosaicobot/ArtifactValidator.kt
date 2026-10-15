@@ -27,6 +27,9 @@ object ArtifactValidator {
         require(!forbidden.containsMatchIn(lua)) { "源码包含不允许的动态执行、全局访问或文件操作" }
         val imports = requiredModules(lua)
         require(imports.containsAll(setOf("display", "delay", "system")) && imports.all { it in setOf("display", "delay", "system", "json", "capability", "gamepad") }) { "必须包含 display、delay、system；仅额外支持 json、gamepad 和受限 HTTPS capability 调用" }
+        for (match in Regex("""\bfont_size\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)(?=\s*[,}])""").findAll(lua)) {
+            require(match.groupValues[1].toDouble() in 8.0..64.0) { "显示内置字体 font_size 必须在 8..64；测量和绘制文字均不可使用更大字号" }
+        }
         if ("capability" in imports) LuaNetworkPolicy.validate(lua)
         val withoutImports = lua.replace(moduleImport, "")
         require(!Regex("""\brequire\b""").containsMatchIn(withoutImports)) { "不允许动态模块导入" }
