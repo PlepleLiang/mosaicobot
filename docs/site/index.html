@@ -102,7 +102,38 @@
           </div>
         </div>
         <aside class="works-panel" aria-labelledby="works-title">
-          <div class="connection-panel"><div><span class="eyebrow">SIMULATED CONNECTION</span><h3 id="connection-status" role="status">模拟设备未连接</h3></div><div class="connection-actions"><button id="connect-device">模拟连接</button><button id="fail-connection">模拟失败</button><button id="disconnect-device" disabled>断开</button></div><p class="fine-print">断开保留作品，方屏可继续运行。只影响本页的模拟部署，不连接真实硬件。</p></div>
+          <section class="draft-preview" id="draft-preview" aria-labelledby="preview-title">
+            <div class="panel-heading"><div><span class="eyebrow">INSTANT / DRAFT PLAY</span><h3 id="preview-title">草稿即时试玩</h3></div><span class="status-pill">默认可用</span></div>
+            <p class="fine-print">生成即开玩，修改即更新。这里是草稿试玩，不等于已保存或已部署；上方展台仅在确认后替换。</p>
+            <div class="form-tabs" role="group" aria-label="草稿产品形态">
+              <button data-preview-form="back" aria-pressed="true">手机背贴</button><button data-preview-form="game" aria-pressed="false">掌机联屏</button><button data-preview-form="pendant" aria-pressed="false">独立挂件</button>
+            </div>
+            <div class="device-stage" id="preview-stage" data-form="back" data-mount="bag" data-empty="true">
+              <div class="stage-grid" aria-hidden="true"></div>
+              <div class="backpack" aria-hidden="true"><div class="bag-handle"></div><div class="bag-pocket"></div><span>M / DAILY</span></div>
+              <div class="phone-shell" aria-label="草稿手机形态示意">
+                <div class="phone-cameras" aria-hidden="true"><i></i><i></i><i></i></div><span class="phone-back-label" aria-hidden="true">M / POCKET STUDIO</span>
+                <div class="phone-controller">
+                  <div class="controller-label"><span class="signal" aria-hidden="true"></span>手机控制器 <span class="mono">DRAFT</span></div>
+                  <div class="controller-row">
+                    <div class="dpad" role="group" aria-label="草稿手机方向控制"><button data-input="up" aria-label="草稿向上">↑</button><button data-input="left" aria-label="草稿向左">←</button><span aria-hidden="true">+</span><button data-input="right" aria-label="草稿向右">→</button><button data-input="down" aria-label="草稿向下">↓</button></div>
+                    <div class="controller-middle"><span class="mono">MOSAICO</span><span>草稿试玩</span></div><button class="action-key" data-input="action" aria-label="草稿手机动作按钮">A</button>
+                  </div>
+                </div>
+              </div>
+              <div class="lanyard" aria-hidden="true"></div>
+              <div class="mosaico-shell"><canvas id="preview-screen" width="480" height="480" tabindex="0" role="img" aria-label="草稿方屏，等待生成" aria-describedby="preview-help preview-status" hidden>浏览器需要支持 Canvas。</canvas><p class="preview-empty" id="preview-empty">还没有草稿<br>生成一件作品，即刻试玩。</p></div>
+            </div>
+            <div class="mount-choice" id="preview-mount-choice" role="group" aria-label="草稿挂件挂点" hidden><button data-preview-mount="bag" aria-pressed="true">背包</button><button data-preview-mount="phone" aria-pressed="false">手机</button></div>
+            <div class="screen-console">
+              <div class="scene-heading"><strong id="preview-scene-title">等待草稿</strong><span id="preview-status" role="status" aria-live="polite">尚未生成 · 草稿试玩</span></div>
+              <p id="preview-help">在左侧生成作品，或打开已保存版本，即可在这里试玩。</p>
+              <div class="playback" role="group" aria-label="草稿运行控制"><button class="primary" id="preview-start" disabled>开始</button><button id="preview-pause" disabled>暂停</button><button id="preview-retry" disabled>重试</button><button id="preview-exit" disabled>退出</button></div>
+              <div class="touch-controls" role="group" aria-label="草稿触屏控制"><button data-input="left" aria-label="草稿向左">←</button><button data-input="up" aria-label="草稿向上">↑</button><button data-input="down" aria-label="草稿向下">↓</button><button data-input="right" aria-label="草稿向右">→</button><button data-input="action">动作 / A</button></div>
+              <div id="preview-tool-controls" class="tool-controls" hidden><label>画笔颜色 <input id="preview-paint-color" type="color" value="#ff6b35"></label><button id="preview-paint-eraser" aria-pressed="false">擦除</button><button id="preview-paint-clear">清空画板</button></div>
+              <p class="screen-note">聚焦此方屏或此处控制按钮：方向键 / WASD · 空格动作 · P 暂停。</p>
+            </div>
+          </section>
           <div class="works-heading"><h3 id="works-title">我的作品 <span id="works-count">0</span></h3><span class="mono">LOCAL WORKS</span></div>
           <p id="storage-status" class="fine-print" role="status">正在检查本地保存…</p>
           <div id="works-list" class="works-list"><p class="empty-works">这里将留下你做过的版本。<br>从一个小想法开始。</p></div>

@@ -26,10 +26,10 @@ const {pathToFileURL}=require('node:url');
     Object.defineProperty(window,'MosaicoScenes',{configurable:true,get:()=>scenes,set:value=>{
       scenes=value;
       const input=value.Screen.prototype.input,notify=value.Screen.prototype.notify;
-      value.Screen.prototype.notify=function(...args){probe.screen=this;return notify.apply(this,args);};
+      value.Screen.prototype.notify=function(...args){probe[this.canvas.id==='preview-screen'?'preview':'screen']=this;return notify.apply(this,args);};
       value.Screen.prototype.input=function(key,down){
         const before=this.bullets.length,result=input.call(this,key,down);
-        probe.events.push({scene:this.work.scene,key,down,before,after:this.bullets.length,inputs:[...this.inputs]});
+        probe.events.push({canvas:this.canvas.id,scene:this.work.scene,key,down,before,after:this.bullets.length,inputs:[...this.inputs]});
         return result;
       };
     }});
@@ -38,10 +38,10 @@ const {pathToFileURL}=require('node:url');
   const check=(condition,label)=>{assert.ok(condition,label);console.log('PASS '+(++checks)+' '+label);};
   const phase=expected=>page.waitForFunction(p=>document.querySelector('#device-stage').dataset.phase===p,expected);
   const creation=expected=>page.waitForFunction(p=>document.querySelector('#workshop').dataset.creation===p,expected);
-  const connection=expected=>page.waitForFunction(p=>document.querySelector('#workshop').dataset.connection===p,expected);
+  const previewPhase=expected=>page.waitForFunction(p=>document.querySelector('#preview-stage').dataset.phase===p,expected);
   const shot=name=>page.screenshot({path:path.join(screenshots,name+'.png'),fullPage:true});
-  const pick=id=>page.locator('[data-scene="'+id+'"]').click();
-  const action=key=>page.locator('.touch-controls [data-input="'+key+'"]');
+  const pick=id=>page.locator('button[data-scene="'+id+'"]').click();
+  const action=key=>page.locator('.exhibit-panel .touch-controls [data-input="'+key+'"]');
   const neutral=()=>page.evaluate(()=>window.__showcase.screen.inputs.size===0&&!document.querySelector('[data-input][data-held=true]'));
   const saved=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('mosaicobot.showcase.works.v1')||'[]'));
   const confirm=async value=>{
@@ -82,40 +82,33 @@ const {pathToFileURL}=require('node:url');
     check(await page.evaluate(()=>__showcase.screen.remaining<300),'focus uses elapsed browser time');
     await pick('expression');await page.locator('#scene-start').click();
     await shot('01-lifecycle');
-    // 2. Generation, save, connection failure/retry, cancel/confirm and immutable versions.
+    // 2. Instant generation, independent preview, cancel/confirm and immutable versions.
+    check(await page.locator('#connect-device,#fail-connection,#disconnect-device,.connection-panel').count()===0&&await page.locator('#workshop').getAttribute('data-connection')===null,'connection simulation removed; available by default');
+    check(await page.locator('#preview-empty').isVisible()&&await page.locator('#preview-start').isDisabled(),'preview starts explicitly empty');
+    check(await page.evaluate(()=>{const ids=[...document.querySelectorAll('[id]')].map(n=>n.id);return ids.length===new Set(ids).size&&__showcase.screen!==__showcase.preview;}),'unique IDs and independent Screen instances');
     await page.locator('#intent').fill('做一个橙色慢速坦克');await page.locator('#generate').click();
-    await creation('generating');
-    check(await page.locator('#generate').isDisabled()&&await page.locator('#intent').isDisabled(),'generation locks form');
-    await creation('generated');
+    await creation('generated');await previewPhase('running');
+    check(await page.locator('#generate').isEnabled()&&await page.locator('#intent').isEnabled(),'generation is immediate without artificial timer or locked form');
     check(await page.locator('#draft-title').innerText()==='坦克守线'&&await page.locator('#work-speed').inputValue()==='1'&&await page.locator('#deploy-work').isDisabled(),'generated draft has parsed parameters and cannot deploy unsaved');
-    check(await page.locator('#device-stage').getAttribute('data-scene')==='expression','generation does not replace running screen');
+    check(await page.locator('#device-stage').getAttribute('data-scene')==='expression'&&await page.evaluate(()=>__showcase.preview.work.scene==='tank'&&__showcase.preview.work.speed===1),'generation starts preview without replacing running exhibit');
     await page.locator('#save-work').click();await creation('saved');
     const version1=(await saved())[0];
-    check(version1.scene==='tank'&&version1.version===1&&await page.locator('#save-work').isDisabled(),'save persists V1 without deployment');
+    check(version1.scene==='tank'&&version1.version===1&&await page.locator('#save-work').isDisabled()&&await page.locator('#preview-stage').getAttribute('data-phase')==='running','save persists V1 with playable preview, without deployment');
     await page.locator('#deploy-work').click();
-    check(!await page.locator('#confirm-dialog').evaluate(node=>node.open)&&await page.locator('#connect-device').evaluate(node=>node===document.activeElement),'disconnected deployment blocked with connect focus');
-    await page.locator('#fail-connection').click();await connection('connecting');await connection('failed');
-    check((await saved()).length===1&&await page.locator('#connect-device').innerText()==='重试连接','failed connection preserves saved version');
-    await page.locator('#connect-device').click();await connection('connected');
-    await page.locator('#deploy-work').click();
-    check(await page.locator('#confirm-dialog').evaluate(node=>node.open)&&await page.locator('#device-stage').getAttribute('data-phase')==='running','deployment modal does not pause independent screen');
+    check(await page.locator('#confirm-dialog').evaluate(node=>node.open)&&await page.locator('#device-stage').getAttribute('data-phase')==='running','available deployment still needs confirmation; modal preserves independent run');
     await confirm('cancel');
     check(await page.locator('#device-stage').getAttribute('data-scene')==='expression'&&await page.locator('#deploy-work').evaluate(node=>node===document.activeElement),'cancel preserves run and restores trigger focus');
     await page.locator('#deploy-work').click();await confirm('confirm');await creation('deployed');
     check(await page.evaluate(()=>__showcase.screen.work.id===JSON.parse(localStorage.getItem('mosaicobot.showcase.works.v1'))[0].id)&&await page.locator('#device-stage').getAttribute('data-phase')==='running','only confirmed deploy runs saved snapshot');
-    // 3. Confirmed deployment must restore keyboard focus to the square screen.
-    check(await page.locator('#mosaico-screen').evaluate(node=>node===document.activeElement),'confirmed deployment restores square-screen focus');
+    check(await page.locator('#preview-screen').evaluate(node=>node===document.activeElement),'confirmed deployment stays in workshop with playable draft focus');
     await shot('02-confirmed-deployment');
     await page.locator('#modify-work').click();await creation('modified');
     await page.locator('#work-color').selectOption('#8ecaff');await page.locator('#work-speed').selectOption('3');
-    check(await page.locator('#draft-version').innerText()==='V02'&&await page.evaluate(()=>__showcase.screen.work.version===1&&__showcase.screen.work.color==='#ff6b35'),'editing V2 leaves running V1 unchanged');
+    check(await page.locator('#draft-version').innerText()==='V02'&&await page.evaluate(()=>__showcase.screen.work.version===1&&__showcase.screen.work.color==='#ff6b35'&&__showcase.preview.work.version===2&&__showcase.preview.work.color==='#8ecaff'&&__showcase.preview.work.speed===3&&__showcase.preview.phase==='running'),'valid V2 edits update/start preview immediately; deployed V1 unchanged');
     await page.locator('#save-work').click();
     check((await saved()).length===2&&JSON.stringify((await saved())[1])===JSON.stringify(version1),'saving V2 preserves original V1 snapshot');
-    await page.locator('#disconnect-device').click();await connection('disconnected');
-    check(await page.locator('#device-stage').getAttribute('data-phase')==='running'&&await neutral()&&(await saved()).length===2,'disconnect clears input but keeps independent run and versions');
-    await page.locator('#connect-device').click();await connection('connected');
     await page.locator('#deploy-work').click();await confirm('confirm');
-    check(await page.evaluate(()=>__showcase.screen.work.version===2&&__showcase.screen.work.color==='#8ecaff'),'reconnect permits explicit V2 deployment');
+    check(await page.evaluate(()=>__showcase.screen.work.version===2&&__showcase.screen.work.color==='#8ecaff'),'explicit V2 confirmation replaces exhibit without connection gate');
     await page.locator('#scene-pause').click();
     // 4. Unsupported requests never invent a draft or overwrite saved versions.
     const versions=JSON.stringify(await saved());
@@ -126,28 +119,33 @@ const {pathToFileURL}=require('node:url');
     // 5. Reload restores versions, not connection or running state.
     await page.reload();await page.waitForFunction(()=>window.__showcase?.screen);
     check(JSON.stringify(await saved())===versions&&await page.locator('.work-item').count()===2,'saved versions survive reload');
-    check(await page.locator('#device-stage').getAttribute('data-scene')==='expression'&&await page.locator('#device-stage').getAttribute('data-phase')==='idle'&&await page.locator('#workshop').getAttribute('data-connection')==='disconnected','reload does not silently reconnect or deploy');
+    check(await page.locator('#device-stage').getAttribute('data-scene')==='expression'&&await page.locator('#device-stage').getAttribute('data-phase')==='idle'&&await page.locator('#preview-stage').getAttribute('data-phase')==='empty','reload restores neither draft nor deployed run');
     await page.locator('.work-item').last().locator('button').click();
-    check(await page.locator('#draft-version').innerText()==='V01'&&await page.locator('#work-color').inputValue()==='#ff6b35','stored V1 reopens with original parameters');
+    check(await page.locator('#draft-version').innerText()==='V01'&&await page.locator('#work-color').inputValue()==='#ff6b35'&&await page.evaluate(()=>__showcase.preview.work.version===1&&__showcase.preview.phase==='running'),'stored V1 reopens with original parameters and starts preview');
     await shot('03-reloaded-versions');
-    // 6. Four viewport widths, three physical forms, both pendant mounts: no clipping.
-    for(const width of [375,768,1024,1440]){
-      await page.setViewportSize({width,height:width===375?844:1050});
-      for(const form of ['back','game','pendant']){
-        await page.locator('button[data-form="'+form+'"]').click();
+    // 6. Both independent exhibits, four widths, three forms and both mounts.
+    for(const width of [320,375,768,1024,1440]){
+      await page.setViewportSize({width,height:width<=375?844:1050});
+      for(const preview of [false,true])for(const form of ['back','game','pendant']){
+        const formAttr=preview?'data-preview-form':'data-form',mountAttr=preview?'data-preview-mount':'data-mount',stageId=preview?'preview-stage':'device-stage';
+        const other=preview?'#device-stage':'#preview-stage',previous=await page.locator(other).getAttribute('data-form');
+        await page.locator('button['+formAttr+'="'+form+'"]').click();
+        check(await page.locator(other).getAttribute('data-form')===previous,'independent form '+width+' '+stageId+' '+form);
         for(const mount of form==='pendant'?['bag','phone']:['bag']){
-          if(form==='pendant')await page.locator('button[data-mount="'+mount+'"]').click();
-          const layout=await page.evaluate(()=>{
-            const stage=document.querySelector('#device-stage'),root=stage.getBoundingClientRect();
+          if(form==='pendant')await page.locator('button['+mountAttr+'="'+mount+'"]').click();
+          await page.locator('#'+stageId).scrollIntoViewIfNeeded();
+          const layout=await page.evaluate(id=>{
+            const stage=document.getElementById(id),root=stage.getBoundingClientRect();
             const visible=node=>!!node.getClientRects().length&&getComputedStyle(node).display!=='none';
             const objects=[...stage.querySelectorAll('.phone-shell,.mosaico-shell,.backpack,.lanyard,[data-input]')].filter(visible);
             const clipped=objects.filter(node=>{const r=node.getBoundingClientRect();return r.left<root.left-1||r.right>root.right+1||r.top<root.top-1||r.bottom>root.bottom+1;}).map(node=>node.className||node.dataset.input);
             const overflow=[...document.querySelectorAll('.exhibit-panel,.studio-grid,.creation-panel,.works-panel,.scene-library,.screen-console')].filter(node=>node.scrollWidth>node.clientWidth+1).map(node=>node.className);
             const blocked=[...stage.querySelectorAll('[data-input]')].filter(visible).filter(node=>{const r=node.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return r.width<44||r.height<44||!node.contains(hit);}).map(node=>node.dataset.input);
-            return {clipped,overflow,blocked,pageFits:document.documentElement.scrollWidth<=innerWidth+1};
-          });
-          check(layout.pageFits&&!layout.clipped.length&&!layout.overflow.length&&!layout.blocked.length,'layout '+width+' '+form+'/'+mount+' '+JSON.stringify(layout));
-          await shot('layout-'+width+'-'+form+(form==='pendant'?'-'+mount:''));
+            const square=stage.querySelector('.mosaico-shell').getBoundingClientRect(),phone=stage.querySelector('.phone-shell').getBoundingClientRect();
+            return {clipped,overflow,blocked,pageFits:document.documentElement.scrollWidth<=innerWidth+1,stacked:stage.dataset.form!=='game'||square.bottom+16<=phone.top&&phone.width>phone.height&&Math.abs(square.width-square.height)<1};
+          },stageId);
+          check(layout.pageFits&&layout.stacked&&!layout.clipped.length&&!layout.overflow.length&&!layout.blocked.length,'layout '+width+' '+stageId+' '+form+'/'+mount+' '+JSON.stringify(layout));
+          await shot('layout-'+width+'-'+stageId+'-'+form+(form==='pendant'?'-'+mount:''));
         }
       }
     }
@@ -161,7 +159,7 @@ const {pathToFileURL}=require('node:url');
       check(await fired()&&await neutral(),id+' short Space fires immediately and releases');
       await resetEvents();await action('action').focus();await page.keyboard.press('Enter');
       check(await fired()&&await neutral(),id+' keyboard button activation fires and releases');
-      await resetEvents();await page.locator('.phone-controller [data-input="action"]').tap();
+      await resetEvents();await page.locator('.exhibit-panel .phone-controller [data-input="action"]').tap();
       check(await fired()&&await neutral(),id+' short phone-controller touch fires and releases');
       await resetEvents();await action('action').tap();
       check(await fired()&&await neutral(),id+' short square-console touch fires and releases');
@@ -198,7 +196,7 @@ const {pathToFileURL}=require('node:url');
     await shot('04-pet-text');
     // 9. Compare actual normal/hover styles and readable contrast on dark selected controls.
     await page.locator('#scene-pause').click();await phase('paused');
-    for(const selector of ['#scene-start','button[data-form="back"]','.touch-controls [data-input="action"]']){
+    for(const selector of ['#scene-start','button[data-form="back"]','.exhibit-panel .touch-controls [data-input="action"]']){
       const button=page.locator(selector);await button.scrollIntoViewIfNeeded();await page.mouse.move(0,0);
       const name=selector.includes('scene-start')?'primary':selector.includes('data-form')?'selected':'action';
       await shot('normal-'+name);
@@ -213,6 +211,97 @@ const {pathToFileURL}=require('node:url');
       check(hover.background!==normal.background&&hover.contrast>=4.5,'hover changes background with readable text '+selector+' '+JSON.stringify({normal,hover}));
       await shot('hover-'+(selector.includes('scene-start')?'primary':selector.includes('data-form')?'selected':'action'));
     }
+    // 10. Every draft template is immediately playable, with its own lifecycle.
+    const previewAction=key=>page.locator('#draft-preview .touch-controls [data-input="'+key+'"]');
+    const previewNeutral=()=>page.evaluate(()=>__showcase.preview.inputs.size===0&&__showcase.preview.painting==null&&!document.querySelector('#draft-preview [data-held=true]'));
+    const discard=async()=>{await page.locator('#discard-work').click();await confirm('confirm');await previewPhase('empty');};
+    await discard();
+    check(await page.locator('#preview-empty').isVisible()&&await page.locator('#preview-screen').isHidden()&&await page.locator('#preview-start').isDisabled()&&await previewNeutral(),'discard resets draft preview to explicit empty state');
+    for(const id of ids){
+      await page.locator('#intent').fill(id);await page.locator('#generate').click();await previewPhase('running');
+      check(await page.evaluate(scene=>__showcase.preview.work.scene===scene&&__showcase.screen.work.scene==='pixelpet',id),id+' instant preview leaves exhibit unchanged');
+      await page.locator('#preview-pause').click();await previewPhase('paused');
+      const age=await page.evaluate(()=>__showcase.preview.age);await page.waitForTimeout(100);
+      check(await previewNeutral()&&await page.evaluate(()=>__showcase.preview.age)===age,id+' preview pause freezes and releases');
+      await page.locator('#preview-start').click();await previewPhase('running');
+      await page.locator('#preview-retry').click();await previewPhase('running');
+      check(await page.evaluate(()=>__showcase.preview.age<1&&__showcase.preview.score===0),id+' preview retry resets');
+      await page.locator('#preview-exit').click();await previewPhase('exited');
+      check(await previewNeutral(),id+' preview exit releases');
+      await page.locator('#preview-start').click();await previewPhase('running');
+      if(['tank','flight'].includes(id)){
+        const previewFired=()=>page.evaluate(()=>__showcase.events.some(e=>e.canvas==='preview-screen'&&e.down&&e.key==='action'&&e.after===e.before+1)&&!__showcase.events.some(e=>e.canvas==='mosaico-screen'));
+        for(const width of [375,768,1024,1440]){
+          await page.setViewportSize({width,height:1050});await page.locator('[data-preview-form="game"]').click();
+          await page.locator('#preview-retry').click();await page.locator('#preview-screen').focus();
+          await resetEvents();await page.keyboard.press('Space');
+          check(await previewFired()&&await previewNeutral(),id+' preview keyboard isolated '+width);
+          await resetEvents();await previewAction('action').focus();await page.keyboard.press('Enter');
+          check(await previewFired()&&await previewNeutral(),id+' preview accessible button '+width);
+          await resetEvents();await page.locator('#draft-preview .phone-controller [data-input="action"]').tap();
+          check(await previewFired()&&await previewNeutral(),id+' preview phone touch '+width);
+          await resetEvents();await previewAction('action').tap();
+          check(await previewFired()&&await previewNeutral(),id+' preview console touch '+width);
+        }
+        await page.locator('#preview-screen').focus();await page.keyboard.down('ArrowLeft');
+        check(await page.evaluate(()=>__showcase.preview.inputs.has('left')),'preview holds direction');
+        await page.locator('[data-preview-form="back"]').click();await page.keyboard.up('ArrowLeft');
+        check(await previewNeutral(),'preview form change releases input');
+        await page.locator('#preview-screen').focus();await page.keyboard.down('ArrowLeft');await page.locator('#work-speed').focus();await page.keyboard.up('ArrowLeft');
+        check(await previewNeutral(),'editor focus releases preview input');
+        await page.locator('#preview-screen').focus();await page.keyboard.down('ArrowRight');await page.evaluate(()=>window.dispatchEvent(new Event('blur')));await page.keyboard.up('ArrowRight');await previewPhase('paused');
+        check(await previewNeutral(),'blur pauses and releases preview');
+        await page.locator('#preview-start').click();await page.locator('#preview-screen').focus();await page.keyboard.press('p');await previewPhase('paused');await page.keyboard.press('p');await previewPhase('running');
+        await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});await previewPhase('paused');
+        check(await previewNeutral()&&await page.locator('#device-stage').getAttribute('data-phase')==='paused','hidden page pauses both independent screens');
+        await page.evaluate(()=>{delete document.hidden;});await page.locator('#preview-start').click();
+        await previewAction('left').scrollIntoViewIfNeeded();const box=await previewAction('left').boundingBox();
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{id:2,x:box.x+box.width/2,y:box.y+box.height/2}]});
+        check(await page.evaluate(()=>__showcase.preview.inputs.has('left')),'preview real touch holds');
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});check(await previewNeutral(),'preview touchcancel releases');
+        await page.locator('#preview-screen').focus();await page.keyboard.down('ArrowLeft');await page.locator('#discard-work').click();
+        check(await previewNeutral(),'modal releases preview inputs');await page.keyboard.up('ArrowLeft');await confirm('cancel');
+      }
+      if(id==='focus'){
+        await page.locator('#work-minutes').fill('0');
+        check(await page.evaluate(()=>__showcase.preview.work.minutes===5)&& (await page.locator('#creation-status').innerText()).includes('1–60'),'invalid minutes leave valid preview unchanged');
+        await page.locator('#work-minutes').fill('2');
+        check(await page.evaluate(()=>__showcase.preview.work.minutes===2&&__showcase.preview.remaining<=120&&__showcase.preview.remaining>119&&__showcase.preview.phase==='running'),'valid minutes immediately restart countdown');
+      }
+      if(id==='signature'){
+        await page.locator('#work-text').fill('');check(await page.evaluate(()=>__showcase.preview.work.text==='今天也有光'),'invalid empty signature preserves preview');
+        await page.locator('#work-text').fill('即时看见我的想法');
+        check(await page.evaluate(()=>__showcase.preview.work.text==='即时看见我的想法'&&__showcase.preview.phase==='running'),'signature typing immediately updates preview');
+      }
+      if(id==='pixelpet'){
+        await previewAction('action').tap();check((await page.locator('#preview-status').innerText()).includes('吃饱了，谢谢你')&&(await page.locator('#preview-screen').getAttribute('aria-label')).includes('吃饱了，谢谢你'),'preview pet has visible accessible response');
+      }
+      if(id==='snake'){
+        await previewPhase('ended');check(await previewNeutral(),'preview snake naturally ends and releases');
+        await page.locator('#preview-retry').click();await previewPhase('running');
+      }
+      if(id==='lightboard'){
+        for(const width of [375,768,1024,1440])for(const form of ['back','game','pendant']){
+          await page.setViewportSize({width,height:1050});await page.locator('[data-preview-form="'+form+'"]').click();
+          await page.locator('#preview-screen').scrollIntoViewIfNeeded();const b=await page.locator('#preview-screen').boundingBox();
+          await page.touchscreen.tap(b.x+b.width*.2,b.y+b.height*.2);
+          check(await page.evaluate(()=>__showcase.preview.board.has('3,3')&&__showcase.preview.painting==null),'preview touchscreen paint '+width+' '+form);
+          await page.locator('#preview-paint-clear').click();await confirm('confirm');
+        }
+        await page.locator('[data-preview-form="game"]').click();await page.locator('#preview-screen').scrollIntoViewIfNeeded();
+        const board=await page.locator('#preview-screen').boundingBox(),x=board.x+board.width*.3,y=board.y+board.height*.3;
+        await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+board.width*.25,y+board.height*.25);await page.mouse.up();
+        check(await page.evaluate(()=>__showcase.preview.board.size>=2&&__showcase.screen.board.size===0),'preview canvas drag paints independently');
+        await page.locator('#preview-paint-color').fill('#8ecaff');await page.locator('#preview-screen').focus();await page.keyboard.press('Space');
+        check(await page.evaluate(()=>[...__showcase.preview.board.values()].includes('#8ecaff')),'preview paint color and keyboard painting work');
+        const count=await page.evaluate(()=>__showcase.preview.board.size);await page.locator('#preview-paint-eraser').click();await previewAction('action').tap();
+        check(await page.evaluate(()=>__showcase.preview.board.size)<count,'preview eraser removes current cell');
+        await page.locator('#preview-paint-clear').click();await confirm('cancel');check(await page.evaluate(()=>__showcase.preview.board.size)>0,'cancel preserves preview board');
+        await page.locator('#preview-paint-clear').click();await confirm('confirm');check(await page.evaluate(()=>__showcase.preview.board.size===0),'confirmed clear affects preview board');
+      }
+      await shot('preview-'+id);await discard();
+    }
+    check((await saved()).length===2&&await page.locator('#preview-empty').isVisible(),'discard retains saved versions and clears draft');
     check(errors.length===0,'no JavaScript errors '+JSON.stringify(errors));
     check(external.length===0,'no external requests '+JSON.stringify(external));
     check(failedRequests.length===0,'no failed assets '+JSON.stringify(failedRequests));

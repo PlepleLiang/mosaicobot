@@ -19,8 +19,10 @@ node tools/build-pages.cjs /path/to/new-output
 ```bash
 node --check docs/site/app.js
 node --check docs/site/scenes.js
-# 环境变量 PLAYWRIGHT_PATH 可指定本机已安装模块；PLAYWRIGHT_BROWSER_PATH 可指定浏览器
-node docs/tests/showcase.cjs http://localhost:8080/
+# 环境变量 PLAYWRIGHT_PATH 可指定本机已安装模块；BROWSER_PATH 可指定浏览器
+node docs/tests/showcase.cjs
+# 仓库静态服务；发布产物服务则传根 URL
+node docs/tests/showcase.cjs http://localhost:8080/docs/site/
 ```
 
 ## GitHub Pages
@@ -33,7 +35,9 @@ node docs/tests/showcase.cjs http://localhost:8080/
 ## 演示边界
 
 - 九种本地模板，浏览器独立绘制与运行，不执行 Lua、不调用真实 AI 或硬件接口。
-- 颜色 / 游戏速度 / 专注分钟 / 签名可修改，版本保存于当前浏览器，首次部署需要确认。
-- 设备背贴、手机手柄并列方屏、手机 / 背包挂件为形态概念，不表示磁吸或附件量产。
+- 创作台默认可用，没有模拟连接、失败或断开流程。生成九种模板和有效参数编辑会立即启动右栏独立草稿试玩；保存、打开和修改版本也可试玩，放弃后显示空状态。
+- 草稿试玩不等于保存或部署。版本保存于当前浏览器，每次部署均需确认，确认前不替换上方展台；确认后保持创作区可见。
+- 两处方屏使用独立 Screen，形态与输入互不串扰；支持完整开始 / 暂停 / 重试 / 退出、触屏 / 键盘及画板交互。失焦、隐藏页面、对话框和形态 / 编辑焦点切换释放输入。
+- 设备背贴、方屏在上 / 横屏手机手柄在下、手机 / 背包挂件为形态概念，不表示磁吸或附件量产。两处布局检查 320 / 375 / 768 / 1024 / 1440px，触点至少 44px。
 - 专注使用真实网页倒计时，隐藏页面暂停；像素宠没有后台养成；画板退出 / 切换会重置。
 - 原型内系统、连接、Works、中心上传和手柄均为独立模拟状态，不与本站、Android 或真实设备同步。

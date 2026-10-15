@@ -32,10 +32,20 @@ textarea{resize:vertical;font-size:16px;line-height:1.8;min-height:120px}
 .draft-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
 .draft-actions button{font-size:12px;padding:8px 12px}
 .works-panel{background:#eaece2;padding:30px;border-left:1px solid var(--line);min-width:0}
-.connection-panel{border-bottom:1px solid #cdd0c4;padding-bottom:24px}
-.connection-panel h3{margin-top:6px;font-size:16px}
-.connection-actions{display:flex;gap:7px;flex-wrap:wrap;margin-block:14px}
-.connection-actions button{font-size:11px;padding:8px 10px}
+.draft-preview{border-bottom:1px solid #cdd0c4;padding-bottom:24px}
+.draft-preview .panel-heading{margin-bottom:10px}
+.draft-preview .form-tabs{padding:0;margin-top:16px}
+.draft-preview .screen-console{border:1px solid var(--line);border-radius:12px;padding:16px}
+.scene-heading #preview-status{font-size:11px;max-width:170px;text-align:right;color:var(--green)}
+#preview-help{font-size:12px;color:var(--secondary);margin:8px 0 12px}
+.preview-empty{display:grid;place-content:center;height:100%;aspect-ratio:1;background:var(--dark);color:#d4e7c5;border-radius:16px;text-align:center;font-size:12px;line-height:2}
+#preview-mount-choice{justify-content:center;margin-bottom:16px}
+.draft-preview .phone-shell{width:168px;height:290px;top:44px;transform:translateX(-50%) rotate(-12deg)}
+.draft-preview .mosaico-shell{width:157px;top:147px;padding:9px;border-radius:22px}
+.draft-preview .device-stage{height:365px}
+.draft-preview .device-stage[data-form=pendant] .backpack{left:10%;width:165px;height:250px;top:70px}
+.draft-preview .device-stage[data-form=pendant] .mosaico-shell{width:146px;left:42%;top:180px}
+.draft-preview .device-stage[data-form=pendant] .lanyard{left:51%;top:54px;height:150px;width:54px}
 .works-heading{display:flex;justify-content:space-between;align-items:center;margin:26px 0 10px;gap:8px}
 .works-heading .mono{font-size:9px;color:var(--secondary)}
 #works-count{font:12px Consolas;color:var(--secondary);margin-left:6px}
@@ -87,13 +97,16 @@ dialog p{font-size:14px;color:var(--secondary);overflow-wrap:anywhere}
 .dpad{grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px);gap:2px}
 .dpad button{min-height:44px}
 .dpad span{line-height:44px}
-.device-stage[data-form=game]{height:450px}
-.device-stage[data-form=game] .phone-shell{width:300px;height:205px;top:205px}
+.device-stage[data-form=game],.draft-preview .device-stage[data-form=game]{height:470px}
+.device-stage[data-form=game] .phone-shell{left:50%;top:224px;width:min(300px,calc(100% - 12px));height:205px;transform:translateX(-50%)}
+.device-stage[data-form=game] .mosaico-shell{top:24px;left:50%;width:174px;transform:translateX(-50%)}
 .device-stage[data-scene=lightboard] .mosaico-shell{transform:translateX(-30%) rotate(0deg)}
-.device-stage[data-form=game][data-scene=lightboard] .mosaico-shell{transform:translateX(-25%) rotate(0deg)}
+.device-stage[data-form=game][data-scene=lightboard] .mosaico-shell{transform:translateX(-50%)}
 .device-stage[data-form=pendant][data-scene=lightboard] .mosaico-shell{transform:translateX(-10%) rotate(0deg)}
 [data-input][data-held=true]{background:#6a765e;color:white}
 button[aria-pressed=true]:hover:not(:disabled){background:#42453d;color:#fff}
-@media(max-width:1100px){.device-stage[data-form=game] .phone-shell{left:42%;top:220px}}
-@media(max-width:480px){.device-stage[data-form=game]{height:420px}.device-stage[data-form=game] .phone-shell{left:50%;top:190px;width:300px;height:205px}.controller-middle{display:none}}
+.draft-preview .controller-middle{display:none}
+.action-key{flex-shrink:0}
+@media(max-width:480px){.controller-middle{display:none}}
+.device-stage[data-form=pendant][data-mount=phone] .phone-shell{left:48%;transform:translateX(-55%) rotate(-8deg)}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
