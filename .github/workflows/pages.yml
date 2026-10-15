@@ -1,0 +1,35 @@
+name: Deploy MosaicoBot experience
+on:
+  push:
+    branches: [main]
+    paths: ['docs/site/**', 'docs/*.html', 'docs/*.js', 'docs/*.css', 'docs/hardware-redesign/**', 'tools/build-pages.cjs', '.github/workflows/pages.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Build public static artifact
+        run: node tools/build-pages.cjs "$RUNNER_TEMP/mosaicobot-pages"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ runner.temp }}/mosaicobot-pages
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

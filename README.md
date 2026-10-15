@@ -2,6 +2,12 @@
 
 内部参赛项目：Android 手机端负责创作、保存与部署 Lua Works，Mosaico 设备负责本地执行、系统应用与横屏手柄交互。
 
+## 展示与体验网站
+
+参赛展示站源文件：[docs/site/index.html](docs/site/index.html)。包含手机背贴、掌机联屏、独立挂件三种形态，以及九种可玩模板和模拟创作闭环；保留原交互文档入口。网页不调用真实 AI、Lua 或硬件。
+
+GitHub Pages 目标地址：https://plepleliang.github.io/mosaicobot/ （首次部署成功后可访问）。[预览、验收与发布说明](docs/site/README.md)。
+
 ## 工程目录
 - `mosaicobot-firmware/`：基于 ESP-Mosaico Claw 的设备固件；固件标识仍为 `edge_agent`，目录改名不改变升级协议。
 - `mosaicobot-android/`：原生 Kotlin / Jetpack Compose 手机应用。

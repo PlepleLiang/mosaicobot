@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f3ef">
+  <meta name="description" content="MosaicoBot 口袋硬件工坊：在手机表达意图，让一块方屏成为游戏、陪伴与个性表达。无需安装，体验本地模拟。">
+  <title>MosaicoBot — 让想法，长出身体。</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="scenes.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#workshop">跳到创作台</a>
+  <header class="site-header wrap">
+    <a class="wordmark" href="#top" aria-label="MosaicoBot 首页"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Mosaico<span>Bot</span></a>
+    <nav aria-label="主要导航"><a href="#exhibit">三种形态</a><a href="#workshop">创作台</a><a href="#collection">作品集</a></nav>
+    <a class="header-link" href="../index.html">完整交互原型 <span aria-hidden="true">↗</span></a>
+  </header>
+  <main id="top">
+    <section class="hero wrap" id="exhibit" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="signal" aria-hidden="true"></span> POCKET HARDWARE STUDIO / 01</p>
+        <h1 id="hero-title">让想法，<br><em>长出身体。</em></h1>
+        <p class="hero-lead">手机是随身工坊。<br>一块方屏，是想法的新去处。</p>
+        <p class="hero-description">从一句「做个贪食蛇」开始，创造、确认、运行，再改一点。背贴、掌机、挂件，同一个 Mosaico，不止一种日常。</p>
+        <div class="hero-actions"><a class="button primary" href="#workshop">做一件自己的作品 <span aria-hidden="true">↗</span></a><button class="text-button" id="quick-play">先玩一局 <span aria-hidden="true">→</span></button></div>
+        <p class="fine-print">无需安装 · 无需硬件 · 本地模板模拟</p>
+        <div class="manifesto"><span>意图 → 作品 → 方屏</span><span>小小一块，自有天地。</span></div>
+      </div>
+      <div class="exhibit-panel">
+        <div class="exhibit-top"><span class="mono">MOSAICO / LIVE OBJECT</span><span class="status-pill">网页模拟</span></div>
+        <div class="form-tabs" role="group" aria-label="产品形态">
+          <button data-form="back" aria-pressed="true"><span>01</span> 手机背贴</button>
+          <button data-form="game" aria-pressed="false"><span>02</span> 掌机联屏</button>
+          <button data-form="pendant" aria-pressed="false"><span>03</span> 独立挂件</button>
+        </div>
+        <div class="device-stage" id="device-stage" data-form="back" data-mount="bag">
+          <div class="stage-grid" aria-hidden="true"></div>
+          <span class="stage-coordinate mono" aria-hidden="true">35° / EVERYDAY OBJECT</span>
+          <div class="backpack" aria-hidden="true"><div class="bag-handle"></div><div class="bag-pocket"></div><span>M / DAILY</span></div>
+          <div class="phone-shell" aria-label="手机形态示意">
+            <div class="phone-cameras" aria-hidden="true"><i></i><i></i><i></i></div>
+            <span class="phone-back-label" aria-hidden="true">M / POCKET STUDIO</span>
+            <div class="phone-controller">
+              <div class="controller-label"><span class="signal" aria-hidden="true"></span>手机控制器 <span class="mono">LOCAL</span></div>
+              <div class="controller-row">
+                <div class="dpad" role="group" aria-label="手机方向控制">
+                  <button data-input="up" aria-label="向上">↑</button><button data-input="left" aria-label="向左">←</button><span aria-hidden="true">+</span><button data-input="right" aria-label="向右">→</button><button data-input="down" aria-label="向下">↓</button>
+                </div>
+                <div class="controller-middle"><span class="mono">MOSAICO</span><span>控制，不是投屏</span></div>
+                <button class="action-key" data-input="action" aria-label="手机动作按钮">A</button>
+              </div>
+            </div>
+          </div>
+          <div class="lanyard" aria-hidden="true"></div>
+          <div class="mosaico-shell">
+            <canvas id="mosaico-screen" width="480" height="480" tabindex="0" role="img" aria-label="Mosaico 方屏，本地像素表情预览" aria-describedby="scene-help scene-status">浏览器需要支持 Canvas。场景状态与可见按钮位于方屏下方。</canvas>
+          </div>
+          <span class="device-caption mono" aria-hidden="true">ONE SCREEN. MANY LIVES.</span>
+        </div>
+        <div class="form-description"><div><strong id="form-title">贴近日常，也表达自己。</strong><p id="form-description">手机背面的独立方屏。表情、签名、光点与专注，让背面也有自己的语言。</p></div><div class="mount-choice" id="mount-choice" hidden><button data-mount="bag" aria-pressed="true">背包</button><button data-mount="phone" aria-pressed="false">手机</button></div></div>
+        <p class="concept-note">外观与挂载方式为概念示意，不代表附件量产或磁吸能力。</p>
+        <div class="screen-console">
+          <div class="scene-heading"><div><span class="eyebrow">正在方屏上</span><strong id="scene-title">像素表情</strong></div><span id="scene-status" role="status" aria-live="polite">待开始 · 本地模拟</span></div>
+          <p id="scene-help">点击开始，再用动作按钮切换表情。</p>
+          <div class="playback" role="group" aria-label="场景运行控制"><button class="primary" id="scene-start">开始</button><button id="scene-pause" disabled>暂停</button><button id="scene-retry">重试</button><button id="scene-exit">退出</button></div>
+          <div class="touch-controls" role="group" aria-label="方屏触屏控制"><button data-input="left" aria-label="向左">←</button><button data-input="up" aria-label="向上">↑</button><button data-input="down" aria-label="向下">↓</button><button data-input="right" aria-label="向右">→</button><button data-input="action">动作 / A</button></div>
+          <div id="tool-controls" class="tool-controls">
+            <label>画笔颜色 <input id="paint-color" type="color" value="#ff6b35"></label><button id="paint-eraser" aria-pressed="false">擦除</button><button id="paint-clear">清空画板</button>
+          </div>
+          <p class="screen-note">方向键 / WASD · 空格动作 · P 暂停。先聚焦方屏；触屏使用上方按钮。</p>
+        </div>
+      </div>
+    </section>
+    <div class="section-ribbon"><div class="wrap"><span>不是缩小的手机。</span><span>是想法的另一种身体。 <i aria-hidden="true">↘</i></span></div></div>
+    <section class="workshop wrap" id="workshop" aria-labelledby="workshop-title">
+      <div class="section-heading"><p class="eyebrow">02 / MAKE IT YOURS</p><h2 id="workshop-title">别只看。<br>让它做点什么。</h2><p>把一个小念头，做成可以玩的作品。<br>每个版本，都由你确认后才部署。</p></div>
+      <div class="studio-grid">
+        <div class="creation-panel">
+          <div class="panel-heading"><span class="mono">YOUR POCKET WORKSHOP</span><span class="status-pill">本地模板</span></div>
+          <form id="create-form">
+            <label for="intent">你想让 Mosaico 做什么？</label>
+            <textarea id="intent" maxlength="160" rows="3" placeholder="例如：做一个橙色、慢速的贪食蛇" required aria-describedby="template-boundary"></textarea>
+            <div class="prompt-examples" role="group" aria-label="创作示例"><button type="button" data-prompt="做一个橙色慢速贪食蛇">橙色贪食蛇</button><button type="button" data-prompt="做一个专注5分钟计时器">专注 5 分钟</button><button type="button" data-prompt="做一个像素宠">像素宠</button><button type="button" data-prompt="做一个签名">个性签名</button></div>
+            <details class="template-guide"><summary>支持哪些输入与修改？</summary><p>仅支持贪食蛇、坦克、飞机、赛车、像素宠、光点画板、专注、签名、表情（也支持场景英文名）。可加橙色 / 绿色 / 蓝色 / 粉色，慢速 / 中速 / 快速，专注 1–60 分钟。签名文字在下方编辑。其他需求明确不支持；不模拟任意应用生成。</p></details>
+            <p id="template-boundary" class="fine-print">本地模板匹配，不调用 AI、不执行 Lua、不请求网络。画面与设备实现不保证一致。</p>
+            <button class="primary generate-button" id="generate" type="submit">生成一件作品 <span aria-hidden="true">↗</span></button>
+          </form>
+          <ol class="creation-steps" aria-label="创作进度"><li data-step="generate">01 生成</li><li data-step="save">02 保存</li><li data-step="deploy">03 确认</li><li data-step="run">04 运行</li></ol>
+          <p id="creation-status" class="feedback" role="status" aria-live="polite">等一个想法。也可以从示例开始。</p>
+          <div class="draft-panel" id="draft-panel" hidden>
+            <div class="draft-header"><h3 id="draft-title">作品草稿</h3><span class="mono" id="draft-version">V01</span></div>
+            <div class="parameter-grid">
+              <label for="work-color">作品颜色<select id="work-color"><option value="#ff6b35">信号橙</option><option value="#c0e8b1">薄荷绿</option><option value="#8ecaff">晴空蓝</option><option value="#f6a9c7">樱花粉</option></select></label>
+              <label for="work-speed">运行速度<select id="work-speed"><option value="1">慢速</option><option value="2">中速</option><option value="3">快速</option></select></label>
+              <label for="work-minutes">专注分钟<input id="work-minutes" type="number" min="1" max="60" value="5"></label>
+              <label for="work-text">签名文字<input id="work-text" type="text" maxlength="24" value="今天也有光"></label>
+            </div>
+            <p class="fine-print" id="parameter-note">颜色适用于所有模板；速度适用于游戏；分钟仅用于专注；文字仅用于签名。</p>
+            <div class="draft-actions"><button id="save-work" class="primary">保存版本</button><button id="deploy-work" disabled>确认部署…</button><button id="modify-work" disabled>修改为新版本</button><button id="discard-work">放弃草稿</button></div>
+          </div>
+        </div>
+        <aside class="works-panel" aria-labelledby="works-title">
+          <div class="connection-panel"><div><span class="eyebrow">SIMULATED CONNECTION</span><h3 id="connection-status" role="status">模拟设备未连接</h3></div><div class="connection-actions"><button id="connect-device">模拟连接</button><button id="fail-connection">模拟失败</button><button id="disconnect-device" disabled>断开</button></div><p class="fine-print">断开保留作品，方屏可继续运行。只影响本页的模拟部署，不连接真实硬件。</p></div>
+          <div class="works-heading"><h3 id="works-title">我的作品 <span id="works-count">0</span></h3><span class="mono">LOCAL WORKS</span></div>
+          <p id="storage-status" class="fine-print" role="status">正在检查本地保存…</p>
+          <div id="works-list" class="works-list"><p class="empty-works">这里将留下你做过的版本。<br>从一个小想法开始。</p></div>
+          <div class="loop-diagram" aria-label="创作闭环"><span>说出意图</span><b aria-hidden="true">↘</b><span>方屏运行</span><b aria-hidden="true">↖</b><span>再改一点</span></div>
+        </aside>
+      </div>
+    </section>
+    <section class="collection wrap" id="collection" aria-labelledby="collection-title">
+      <div class="collection-heading"><div><p class="eyebrow">03 / SMALL SCREEN, BIG PLAY</p><h2 id="collection-title">一块方屏的<br>九种小日常。</h2></div><p>每件都能打开，每件都有回应。<br>选择作品，回到上方实体展台体验。<br><span class="fine-print">简化网页玩法，不是 ROM 或设备 Lua。</span></p></div>
+      <div class="scene-library" id="scene-library" role="group" aria-label="可玩场景库"></div>
+    </section>
+    <section class="boundary wrap" aria-labelledby="boundary-title">
+      <div><p class="eyebrow">04 / OPEN WORKBENCH</p><h2 id="boundary-title">体验在这里。<br>实现也有迹可循。</h2><p>本页呈现产品命题与可玩模拟。Android 创作流程、Lua Works、通用手柄与设备系统的完整交互，保留在原型中。</p></div>
+      <div class="prototype-links"><a href="../index.html"><span>01 / WORKSHOP</span>手机创作与设备 <b aria-hidden="true">↗</b></a><a href="../index.html?view=center"><span>02 / APP CENTER</span>应用中心与 Works <b aria-hidden="true">↗</b></a><a href="../index.html?view=game"><span>03 / CONTROLLER</span>横屏通用手柄 <b aria-hidden="true">↗</b></a><a href="../hardware-redesign/index.html"><span>04 / DEVICE SYSTEM</span>九屏硬件系统 <b aria-hidden="true">↗</b></a></div>
+    </section>
+  </main>
+  <footer class="wrap"><a class="wordmark" href="#top">Mosaico<span>Bot</span></a><p>手机是随身工坊，Mosaico 是可编程的身体。</p><a href="https://github.com/PlepleLiang/mosaicobot" target="_blank" rel="noopener noreferrer">查看源码 ↗</a><span class="fine-print">概念展示 / 本地模拟 · 不含真实 AI 与硬件远控</span></footer>
+  <dialog id="confirm-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-description"><form method="dialog"><span class="eyebrow">YOUR CONFIRMATION</span><h2 id="dialog-title">确认部署这个版本？</h2><p id="dialog-description"></p><div class="dialog-actions"><button value="cancel" autofocus>取消</button><button class="primary" value="confirm">确认</button></div></form></dialog>
+  <noscript><p class="noscript">可玩场景和创作台需要 JavaScript。仍可访问上面的完整原型链接。</p></noscript>
+</body>
+</html>
