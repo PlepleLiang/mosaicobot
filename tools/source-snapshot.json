@@ -1,0 +1,99 @@
+{
+  "sources": {
+    "projects/esp-mosaico-claw": {
+      "target": "mosaicobot-firmware",
+      "files": 2288,
+      "bytes": 36699364
+    },
+    "projects/mosaicobot-android": {
+      "target": "mosaicobot-android",
+      "files": 70,
+      "bytes": 460349
+    },
+    "projects/esp-mosaico-vibe": {
+      "target": "esp-mosaico-vibe-custom",
+      "files": 1227,
+      "bytes": 16405758
+    },
+    "docs/mosaicobot": {
+      "target": "docs",
+      "files": 169,
+      "bytes": 12678919
+    }
+  },
+  "repositories": {
+    "projects/esp-mosaico-claw": "0c6d8e44030fc21d936421aa7dd96df5b1bf5392",
+    "projects/esp-mosaico-vibe": "95469e63b621fc6ece3b0e313af8c1ba59dcd066",
+    "projects/esp-mosaico-claw/third-party/esp-claw": "c4d5648f4d4447fb7f46679eb61e32a7ea253ce2",
+    "projects/esp-mosaico-vibe/submodule/esp-mosaico-utils": "fc63d43f3ac72aa54e701b07b07fbed07a16b3ca",
+    "projects/esp-mosaico-vibe/submodule/esp-mosaico-bsp": "a2c985ad698b3f04a21c63e006b43e7e948bc1d7",
+    "projects/esp-mosaico-vibe/submodule/raylib-lite-engine": "ca3200a6b7f63e2bdea07851e19fdbd3a42eb742"
+  },
+  "local_changes": {
+    "projects/esp-mosaico-claw": [
+      " M CMakeLists.txt",
+      " M components/http_server/CMakeLists.txt",
+      " M components/http_server/http_server_core.c",
+      " M components/http_server/http_server_priv.h",
+      " M components/mosaic_ui/apps/works/scene/gen_scene.py",
+      " M components/mosaic_ui/common/works_runtime.c",
+      " M components/mosaic_ui/common/works_runtime.h",
+      " M components/mosaic_ui/hub/app.cmake",
+      " M components/mosaic_ui/hub/mosaic_hub_app.c",
+      " M components/mosaic_ui/hub/scene/gen_scenes.py",
+      " M components/mosaic_ui/idf_component.yml",
+      " M components/mosaic_ui/mosaic_ui.c",
+      " M main/CMakeLists.txt",
+      " M main/main.c",
+      " M tools/cmake/flash_partition_defaults.cmake",
+      "?? .codex-runs/",
+      "?? components/http_server/WORKS_API.md",
+      "?? components/http_server/http_server_gamepad_api.c",
+      "?? components/http_server/http_server_works_api.c",
+      "?? components/lua_module_gamepad/",
+      "?? components/mosaic_ui/common/assets/graphite/",
+      "?? components/mosaic_ui/common/graphite_assets.py",
+      "?? docs/",
+      "?? partitions_mosaicobot.csv",
+      "?? sdkconfig.mosaicobot.defaults",
+      "?? tools/cmake/mosaicobot_profile.cmake",
+      "?? tools/tests/"
+    ],
+    "projects/esp-mosaico-vibe": [
+      " M docs/mosaico-cli.md",
+      " M docs/mosaico-cli_CN.md",
+      " M submodule/esp-mosaico-utils",
+      "?? projects/snake/"
+    ],
+    "projects/esp-mosaico-claw/third-party/esp-claw": [],
+    "projects/esp-mosaico-vibe/submodule/esp-mosaico-utils": [
+      " M esp-mosaico-recovery/firmware/recovery/README.md",
+      " M esp-mosaico-recovery/firmware/recovery/cmake/recovery_image.cmake",
+      " M esp-mosaico-recovery/firmware/recovery/main/CMakeLists.txt",
+      " M mosaico-tools/cmake/system_update.cmake",
+      " M mosaico-tools/components/esp_mosaico_gsp_iris/include/iris_screen_mirror.h",
+      " M mosaico-tools/components/esp_mosaico_gsp_iris/iris_screen_mirror.c",
+      " M mosaico-tools/docs/application-integration.md",
+      " M mosaico-tools/skills/idf-low-noise-build/scripts/idf_low_noise_build.py",
+      " D mosaico-tools/tests/gsp_mirror_host/bsp/esp_mosaico.h",
+      " M mosaico-tools/tests/gsp_mirror_host/mirror_lifecycle_test.c",
+      " M mosaico-tools/tests/test_device_evidence.py",
+      " M mosaico-tools/tools/mosaico_cli/cli.py",
+      " M mosaico-tools/tools/mosaico_cli/commands.py",
+      " M mosaico-tools/tools/mosaico_cli/session_runtime.py",
+      "?? esp-mosaico-recovery/firmware/recovery/cmake/recovery_flash_mode.cmake",
+      "?? esp-mosaico-recovery/firmware/recovery/tools/normalize_gsp_depfile.py",
+      "?? esp-mosaico-recovery/tests/test_gsp_windows_depfile.py",
+      "?? esp-mosaico-recovery/tests/test_recovery_flash_mode.py",
+      "?? esp-mosaico-recovery/tests/test_s31_usb_restart.py",
+      "?? esp-mosaico-recovery/tools/patches/",
+      "?? mosaico-tools/tests/gsp_mirror_host/bsp/display.h",
+      "?? mosaico-tools/tests/test_build_profiles.py",
+      "?? mosaico-tools/tests/test_rom_layout.py",
+      "?? mosaico-tools/tools/mosaico_cli/device_actions.py",
+      "?? mosaico-tools/tools/mosaico_cli/rom_layout.py"
+    ],
+    "projects/esp-mosaico-vibe/submodule/esp-mosaico-bsp": [],
+    "projects/esp-mosaico-vibe/submodule/raylib-lite-engine": []
+  }
+}

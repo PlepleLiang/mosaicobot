@@ -1,0 +1,928 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include "works_runtime.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+
+#include "cJSON.h"
+#include "cap_lua.h"
+#include "app_registry.h"
+#include "claw_paths.h"
+#include "claw_utils_file.h"
+#include "esp_attr.h"
+#include "esp_check.h"
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+#include "freertos/semphr.h"
+#include "freertos/task.h"
+
+#define WORKS_CATALOG_LIMIT       64U
+#define WORKS_PATH_MAX            128U
+#define WORKS_RECENT_FILE_MAX     2048U
+#define WORKS_COMMAND_QUEUE_DEPTH 8U
+#define WORKS_WORKER_STACK        6144U
+#define WORKS_WORKER_PRIORITY     4U
+#define WORKS_OUTPUT_BYTES        512U
+#define WORKS_STOP_WAIT_MS        1000U
+
+typedef struct {
+    char *id;
+    char *display_name;
+    char *entry;
+    char *args_json;
+    int order;
+    bool builtin;
+    works_runtime_state_t state;
+    char job_id[CAP_LUA_JOB_ID_LEN];
+    char last_error[WORKS_RUNTIME_ERROR_MAX];
+} works_item_t;
+
+typedef struct {
+    works_item_t *items;
+    size_t count;
+    size_t capacity;
+} works_catalog_builder_t;
+
+typedef enum {
+    WORKS_COMMAND_START = 0,
+    WORKS_COMMAND_STOP,
+} works_command_type_t;
+
+typedef struct {
+    works_command_type_t type;
+    char app_id[WORKS_RUNTIME_APP_ID_MAX];
+    char job_id[CAP_LUA_JOB_ID_LEN];
+} works_command_t;
+
+typedef struct {
+    SemaphoreHandle_t lock;
+    QueueHandle_t commands;
+    TaskHandle_t worker;
+    works_item_t *items;
+    size_t item_count;
+    char deleting_id[WORKS_RUNTIME_APP_ID_MAX];
+    char *recent_ids[WORKS_RUNTIME_RECENT_LIMIT];
+    size_t recent_count;
+    uint32_t revision;
+    bool recents_loaded;
+    bool recent_dirty;
+    bool job_callback_registered;
+    works_runtime_changed_cb_t on_changed;
+    void *on_changed_ctx;
+} works_runtime_t;
+
+static const char *TAG = "works_runtime";
+static EXT_RAM_BSS_ATTR works_runtime_t s_runtime;
+
+static bool state_is_active(works_runtime_state_t state)
+{
+    return state == WORKS_RUNTIME_QUEUED || state == WORKS_RUNTIME_RUNNING ||
+           state == WORKS_RUNTIME_STOPPING;
+}
+
+static uint32_t next_revision_locked(void)
+{
+    if (++s_runtime.revision == 0) {
+        ++s_runtime.revision;
+    }
+    return s_runtime.revision;
+}
+
+static void notify_changed(uint32_t revision)
+{
+    works_runtime_changed_cb_t callback = NULL;
+    void *ctx = NULL;
+
+    if (revision == 0 || !s_runtime.lock) {
+        return;
+    }
+    xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+    callback = s_runtime.on_changed;
+    ctx = s_runtime.on_changed_ctx;
+    xSemaphoreGive(s_runtime.lock);
+    if (callback) {
+        callback(revision, ctx);
+    }
+}
+
+static void item_free(works_item_t *item)
+{
+    if (!item) {
+        return;
+    }
+    free(item->id);
+    free(item->display_name);
+    free(item->entry);
+    free(item->args_json);
+    memset(item, 0, sizeof(*item));
+}
+
+static void catalog_free(works_item_t *items, size_t count)
+{
+    if (!items) {
+        return;
+    }
+    for (size_t i = 0; i < count; ++i) {
+        item_free(&items[i]);
+    }
+    free(items);
+}
+
+static works_item_t *find_item_locked(const char *id)
+{
+    if (!id) {
+        return NULL;
+    }
+    for (size_t i = 0; i < s_runtime.item_count; ++i) {
+        if (strcmp(s_runtime.items[i].id, id) == 0) {
+            return &s_runtime.items[i];
+        }
+    }
+    return NULL;
+}
+
+static uint32_t hash_name(const char *text)
+{
+    uint32_t hash = UINT32_C(2166136261);
+    while (text && *text) {
+        hash ^= (uint8_t)*text++;
+        hash *= UINT32_C(16777619);
+    }
+    return hash;
+}
+
+static works_item_t *find_job_locked(const char *name)
+{
+    if (!name || !name[0]) {
+        return NULL;
+    }
+    for (size_t i = 0; i < s_runtime.item_count; ++i) {
+        char item_name[CAP_LUA_JOB_NAME_MAX];
+        snprintf(item_name, sizeof(item_name), "work_%08lx", (unsigned long)hash_name(s_runtime.items[i].id));
+        if (strcmp(item_name, name) == 0) {
+            return &s_runtime.items[i];
+        }
+    }
+    return NULL;
+}
+
+static esp_err_t collect_catalog(const app_registry_entry_t *entry,
+                                 void *user_ctx)
+{
+    works_catalog_builder_t *builder = user_ctx;
+    if (!entry || !builder || !entry->visible || !entry->entry) {
+        return ESP_OK;
+    }
+    if (builder->count >= WORKS_CATALOG_LIMIT) {
+        return ESP_OK;
+    }
+    if (builder->count == builder->capacity) {
+        size_t capacity = builder->capacity ? builder->capacity * 2U : 8U;
+        if (capacity > WORKS_CATALOG_LIMIT) {
+            capacity = WORKS_CATALOG_LIMIT;
+        }
+        works_item_t *items = realloc(builder->items,
+                                      capacity * sizeof(*items));
+        if (!items) {
+            return ESP_ERR_NO_MEM;
+        }
+        memset(items + builder->capacity, 0,
+               (capacity - builder->capacity) * sizeof(*items));
+        builder->items = items;
+        builder->capacity = capacity;
+    }
+
+    works_item_t *item = &builder->items[builder->count];
+    item->id = strdup(entry->app_id);
+    item->display_name = strdup(entry->display_name ? entry->display_name : entry->app_id);
+    item->entry = strdup(entry->entry);
+    item->args_json = entry->args_json ? strdup(entry->args_json) : NULL;
+    if (!item->id || !item->display_name || !item->entry ||
+            (entry->args_json && !item->args_json)) {
+        item_free(item);
+        return ESP_ERR_NO_MEM;
+    }
+    item->order = entry->order;
+    item->builtin = entry->manage_mode == APP_REGISTRY_MANAGE_MODE_READONLY;
+    item->state = WORKS_RUNTIME_STOPPED;
+    builder->count++;
+    return ESP_OK;
+}
+
+static int compare_items(const void *left, const void *right)
+{
+    const works_item_t *a = left;
+    const works_item_t *b = right;
+    if (a->order != b->order) {
+        return a->order < b->order ? -1 : 1;
+    }
+    return strcmp(a->id, b->id);
+}
+
+static bool optional_equal(const char *left, const char *right)
+{
+    return left ? right && strcmp(left, right) == 0 : right == NULL;
+}
+
+static bool catalog_equal_locked(const works_item_t *items, size_t count)
+{
+    if (count != s_runtime.item_count) {
+        return false;
+    }
+    for (size_t i = 0; i < count; ++i) {
+        const works_item_t *old = &s_runtime.items[i];
+        const works_item_t *next = &items[i];
+        if (old->order != next->order || old->builtin != next->builtin ||
+                strcmp(old->id, next->id) != 0 ||
+                strcmp(old->display_name, next->display_name) != 0 ||
+                strcmp(old->entry, next->entry) != 0 ||
+                !optional_equal(old->args_json, next->args_json)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool recent_contains_locked(const char *id)
+{
+    for (size_t i = 0; i < s_runtime.recent_count; ++i) {
+        if (strcmp(s_runtime.recent_ids[i], id) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool touch_recent_locked(const char *id)
+{
+    size_t found = s_runtime.recent_count;
+    for (size_t i = 0; i < s_runtime.recent_count; ++i) {
+        if (strcmp(s_runtime.recent_ids[i], id) == 0) {
+            found = i;
+            break;
+        }
+    }
+    if (found == 0 && found < s_runtime.recent_count) {
+        return false;
+    }
+    char *selected = NULL;
+    if (found < s_runtime.recent_count) {
+        selected = s_runtime.recent_ids[found];
+    } else {
+        selected = strdup(id);
+        if (!selected) {
+            return false;
+        }
+        if (s_runtime.recent_count == WORKS_RUNTIME_RECENT_LIMIT) {
+            free(s_runtime.recent_ids[WORKS_RUNTIME_RECENT_LIMIT - 1U]);
+        } else {
+            s_runtime.recent_count++;
+        }
+        found = s_runtime.recent_count - 1U;
+    }
+    for (size_t i = found; i > 0; --i) {
+        s_runtime.recent_ids[i] = s_runtime.recent_ids[i - 1U];
+    }
+    s_runtime.recent_ids[0] = selected;
+    s_runtime.recent_dirty = true;
+    return true;
+}
+
+static void prune_recents_locked(void)
+{
+    size_t out = 0;
+    for (size_t i = 0; i < s_runtime.recent_count; ++i) {
+        if (find_item_locked(s_runtime.recent_ids[i])) {
+            s_runtime.recent_ids[out++] = s_runtime.recent_ids[i];
+        } else {
+            free(s_runtime.recent_ids[i]);
+            s_runtime.recent_dirty = true;
+        }
+    }
+    for (size_t i = out; i < s_runtime.recent_count; ++i) {
+        s_runtime.recent_ids[i] = NULL;
+    }
+    s_runtime.recent_count = out;
+}
+
+static esp_err_t recent_paths(char *directory, size_t directory_size,
+                              char *path, size_t path_size)
+{
+    ESP_RETURN_ON_ERROR(claw_paths_join(CLAW_PATH_DATA, "works", directory,
+                                        directory_size), TAG,
+                        "works directory path too long");
+    return claw_paths_join(CLAW_PATH_DATA, "works/recent.json", path,
+                           path_size);
+}
+
+static void load_recents(void)
+{
+    char directory[WORKS_PATH_MAX];
+    char path[WORKS_PATH_MAX];
+    if (recent_paths(directory, sizeof(directory), path, sizeof(path)) != ESP_OK) {
+        return;
+    }
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        return;
+    }
+    if (fseek(file, 0, SEEK_END) != 0) {
+        fclose(file);
+        return;
+    }
+    long size = ftell(file);
+    if (size <= 0 || size > (long)WORKS_RECENT_FILE_MAX ||
+            fseek(file, 0, SEEK_SET) != 0) {
+        fclose(file);
+        return;
+    }
+    char *data = calloc(1, (size_t)size + 1U);
+    if (!data) {
+        fclose(file);
+        return;
+    }
+    size_t read_size = fread(data, 1, (size_t)size, file);
+    fclose(file);
+    if (read_size != (size_t)size) {
+        free(data);
+        return;
+    }
+    cJSON *root = cJSON_Parse(data);
+    free(data);
+    cJSON *apps = root ? cJSON_GetObjectItemCaseSensitive(root, "apps") : NULL;
+    if (cJSON_IsArray(apps)) {
+        cJSON *app = NULL;
+        cJSON_ArrayForEach(app, apps) {
+            if (s_runtime.recent_count == WORKS_RUNTIME_RECENT_LIMIT) {
+                break;
+            }
+            if (!cJSON_IsString(app) || !app->valuestring ||
+                    !app->valuestring[0] ||
+                    recent_contains_locked(app->valuestring)) {
+                continue;
+            }
+            char *copy = strdup(app->valuestring);
+            if (!copy) {
+                break;
+            }
+            s_runtime.recent_ids[s_runtime.recent_count++] = copy;
+        }
+    }
+    cJSON_Delete(root);
+}
+
+esp_err_t works_runtime_flush(void)
+{
+    if (!s_runtime.lock) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    cJSON *root = cJSON_CreateObject();
+    cJSON *apps = cJSON_CreateArray();
+    if (!root || !apps) {
+        cJSON_Delete(root);
+        cJSON_Delete(apps);
+        return ESP_ERR_NO_MEM;
+    }
+    xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+    if (!s_runtime.recent_dirty) {
+        xSemaphoreGive(s_runtime.lock);
+        cJSON_Delete(root);
+        cJSON_Delete(apps);
+        return ESP_OK;
+    }
+    for (size_t i = 0; i < s_runtime.recent_count; ++i) {
+        cJSON *id = cJSON_CreateString(s_runtime.recent_ids[i]);
+        if (!id) {
+            xSemaphoreGive(s_runtime.lock);
+            cJSON_Delete(root);
+            cJSON_Delete(apps);
+            return ESP_ERR_NO_MEM;
+        }
+        cJSON_AddItemToArray(apps, id);
+    }
+    s_runtime.recent_dirty = false;
+    xSemaphoreGive(s_runtime.lock);
+    cJSON_AddItemToObject(root, "apps", apps);
+    char *rendered = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    if (!rendered) {
+        xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+        s_runtime.recent_dirty = true;
+        xSemaphoreGive(s_runtime.lock);
+        return ESP_ERR_NO_MEM;
+    }
+
+    char directory[WORKS_PATH_MAX];
+    char path[WORKS_PATH_MAX];
+    esp_err_t err = recent_paths(directory, sizeof(directory), path, sizeof(path));
+    struct stat info = {0};
+    if (err == ESP_OK && stat(directory, &info) != 0 &&
+            mkdir(directory, 0755) != 0) {
+        err = ESP_FAIL;
+    }
+    if (err == ESP_OK) {
+        err = claw_utils_file_write_atomic(path, rendered, strlen(rendered));
+    }
+    free(rendered);
+    if (err != ESP_OK) {
+        xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+        s_runtime.recent_dirty = true;
+        xSemaphoreGive(s_runtime.lock);
+    }
+    return err;
+}
+
+static void reconcile_active_jobs(void)
+{
+    cap_lua_job_snapshot_t jobs[16];
+    size_t count = cap_lua_collect_active_jobs(jobs,
+                                               sizeof(jobs) / sizeof(jobs[0]));
+    xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+    for (size_t i = 0; i < s_runtime.item_count; ++i) {
+        if (state_is_active(s_runtime.items[i].state)) {
+            s_runtime.items[i].state = WORKS_RUNTIME_STOPPED;
+            s_runtime.items[i].job_id[0] = '\0';
+        }
+    }
+    for (size_t i = 0; i < count; ++i) {
+        works_item_t *item = find_job_locked(jobs[i].name);
+        if (!item) {
+            continue;
+        }
+        item->state = jobs[i].status == CAP_LUA_JOB_QUEUED
+                          ? WORKS_RUNTIME_QUEUED : WORKS_RUNTIME_RUNNING;
+        strlcpy(item->job_id, jobs[i].job_id, sizeof(item->job_id));
+        item->last_error[0] = '\0';
+        (void)touch_recent_locked(item->id);
+    }
+    next_revision_locked();
+    xSemaphoreGive(s_runtime.lock);
+}
+
+static void job_event(const cap_lua_job_event_t *event, void *user_ctx)
+{
+    (void)user_ctx;
+    if (!event || !s_runtime.lock) {
+        return;
+    }
+    uint32_t revision = 0;
+    xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+    works_item_t *item = find_job_locked(event->name);
+    if (item) {
+        bool same_job = !item->job_id[0] ||
+                        strcmp(item->job_id, event->job_id) == 0;
+        switch (event->type) {
+        case CAP_LUA_JOB_EVENT_CREATED:
+            item->state = WORKS_RUNTIME_QUEUED;
+            strlcpy(item->job_id, event->job_id, sizeof(item->job_id));
+            item->last_error[0] = '\0';
+            (void)touch_recent_locked(item->id);
+            break;
+        case CAP_LUA_JOB_EVENT_RUNNING:
+            if (same_job) {
+                item->state = WORKS_RUNTIME_RUNNING;
+                strlcpy(item->job_id, event->job_id, sizeof(item->job_id));
+            }
+            break;
+        case CAP_LUA_JOB_EVENT_STOP_REQUESTED:
+            if (same_job) {
+                item->state = WORKS_RUNTIME_STOPPING;
+            }
+            break;
+        case CAP_LUA_JOB_EVENT_TERMINAL:
+            if (same_job) {
+                item->state = event->status == CAP_LUA_JOB_FAILED ||
+                                      event->status == CAP_LUA_JOB_TIMEOUT
+                                  ? WORKS_RUNTIME_FAILED
+                                  : WORKS_RUNTIME_STOPPED;
+                item->job_id[0] = '\0';
+            }
+            break;
+        default:
+            break;
+        }
+        revision = next_revision_locked();
+    }
+    xSemaphoreGive(s_runtime.lock);
+    notify_changed(revision);
+}
+
+static void register_job_callback(void)
+{
+    if (s_runtime.job_callback_registered) {
+        return;
+    }
+    if (cap_lua_register_job_event_cb(job_event, NULL) == ESP_OK) {
+        s_runtime.job_callback_registered = true;
+    }
+}
+
+static void copy_error_locked(works_item_t *item, const char *message)
+{
+    strlcpy(item->last_error,
+            message && message[0] ? message : "unknown error",
+            sizeof(item->last_error));
+}
+
+static void execute_start(const works_command_t *command)
+{
+    char *path = NULL;
+    char *args = NULL;
+    char name[CAP_LUA_JOB_NAME_MAX];
+    bool found = false;
+    bool has_args = false;
+
+    xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+    works_item_t *item = find_item_locked(command->app_id);
+    if (item && strcmp(s_runtime.deleting_id, command->app_id) != 0) {
+        found = true;
+        has_args = item->args_json != NULL;
+        path = strdup(item->entry);
+        args = item->args_json ? strdup(item->args_json) : NULL;
+    }
+    xSemaphoreGive(s_runtime.lock);
+    if (!found || !path || (has_args && !args)) {
+        free(path);
+        free(args);
+        xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+        item = find_item_locked(command->app_id);
+        uint32_t revision = 0;
+        if (item && item->state == WORKS_RUNTIME_QUEUED) {
+            item->state = WORKS_RUNTIME_FAILED;
+            copy_error_locked(item, "App definition unavailable or out of memory");
+            revision = next_revision_locked();
+        }
+        xSemaphoreGive(s_runtime.lock);
+        notify_changed(revision);
+        return;
+    }
+
+    snprintf(name, sizeof(name), "work_%08lx",
+             (unsigned long)hash_name(command->app_id));
+    char output[WORKS_OUTPUT_BYTES] = {0};
+    esp_err_t err = cap_lua_run_script_async(path, args, 0, name, NULL, false, output, sizeof(output));
+    if (err != ESP_OK) {
+        xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+        item = find_item_locked(command->app_id);
+        uint32_t revision = 0;
+        /* A short cooperative stop may publish its terminal event before this call returns. */
+        if (item && item->state == WORKS_RUNTIME_QUEUED) {
+            item->state = WORKS_RUNTIME_FAILED;
+            copy_error_locked(item, output[0] ? output : esp_err_to_name(err));
+            revision = next_revision_locked();
+        }
+        xSemaphoreGive(s_runtime.lock);
+        notify_changed(revision);
+    }
+    free(path);
+    free(args);
+}
+
+static void execute_stop(const works_command_t *command)
+{
+    char name[CAP_LUA_JOB_NAME_MAX];
+    snprintf(name, sizeof(name), "work_%08lx",
+             (unsigned long)hash_name(command->app_id));
+    const char *target = command->job_id[0] ? command->job_id : name;
+    char output[WORKS_OUTPUT_BYTES] = {0};
+    esp_err_t err = cap_lua_stop_job(target, WORKS_STOP_WAIT_MS,
+                                     output, sizeof(output));
+    uint32_t revision = 0;
+    xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+    works_item_t *item = find_item_locked(command->app_id);
+    if (item) {
+        if (err == ESP_ERR_NOT_FOUND) {
+            item->state = WORKS_RUNTIME_STOPPED;
+            item->job_id[0] = '\0';
+        } else if (err == ESP_ERR_TIMEOUT) {
+            item->state = WORKS_RUNTIME_STOPPING;
+            copy_error_locked(item, "stop requested; waiting for cleanup");
+        } else if (err != ESP_OK) {
+            item->state = WORKS_RUNTIME_FAILED;
+            copy_error_locked(item, output[0] ? output : esp_err_to_name(err));
+        }
+        revision = next_revision_locked();
+    }
+    xSemaphoreGive(s_runtime.lock);
+    notify_changed(revision);
+}
+
+static void worker_task(void *arg)
+{
+    (void)arg;
+    works_command_t command;
+    for (;;) {
+        if (xQueueReceive(s_runtime.commands, &command, portMAX_DELAY) != pdTRUE) {
+            continue;
+        }
+        if (command.type == WORKS_COMMAND_START) {
+            execute_start(&command);
+        } else {
+            execute_stop(&command);
+        }
+        esp_err_t err = works_runtime_flush();
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "persist recents failed: %s", esp_err_to_name(err));
+        }
+    }
+}
+
+esp_err_t works_runtime_refresh(void)
+{
+    if (!s_runtime.lock) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    register_job_callback();
+
+    works_catalog_builder_t builder = {0};
+    esp_err_t err = app_registry_foreach(collect_catalog, &builder);
+    if (err != ESP_OK) {
+        catalog_free(builder.items, builder.count);
+        return err;
+    }
+    if (builder.count > 1U) {
+        qsort(builder.items, builder.count, sizeof(*builder.items), compare_items);
+    }
+
+    bool changed = false;
+    xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+    if (!catalog_equal_locked(builder.items, builder.count)) {
+        for (size_t i = 0; i < builder.count; ++i) {
+            works_item_t *old = find_item_locked(builder.items[i].id);
+            if (old && strcmp(old->entry, builder.items[i].entry) == 0) {
+                builder.items[i].state = old->state;
+                strlcpy(builder.items[i].job_id, old->job_id,
+                        sizeof(builder.items[i].job_id));
+                strlcpy(builder.items[i].last_error, old->last_error,
+                        sizeof(builder.items[i].last_error));
+            }
+        }
+        catalog_free(s_runtime.items, s_runtime.item_count);
+        s_runtime.items = builder.items;
+        s_runtime.item_count = builder.count;
+        builder.items = NULL;
+        prune_recents_locked();
+        changed = true;
+    }
+    xSemaphoreGive(s_runtime.lock);
+    catalog_free(builder.items, builder.count);
+    if (changed) {
+        reconcile_active_jobs();
+        uint32_t revision = 0;
+        (void)works_runtime_get_revision(&revision);
+        notify_changed(revision);
+    }
+    return ESP_OK;
+}
+
+static void works_apps_changed(void *user_ctx)
+{
+    (void)user_ctx;
+    esp_err_t err = works_runtime_refresh();
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "refresh App catalog failed: %s", esp_err_to_name(err));
+    }
+}
+
+/* Startup-thread preparation, before the UI or HTTP can submit work. */
+esp_err_t works_runtime_prepare(void)
+{
+    if (!s_runtime.lock) {
+        s_runtime.lock = xSemaphoreCreateMutex();
+        s_runtime.commands = xQueueCreate(WORKS_COMMAND_QUEUE_DEPTH,
+                                          sizeof(works_command_t));
+        if (!s_runtime.lock || !s_runtime.commands) {
+            if (s_runtime.commands) {
+                vQueueDelete(s_runtime.commands);
+                s_runtime.commands = NULL;
+            }
+            if (s_runtime.lock) {
+                vSemaphoreDelete(s_runtime.lock);
+                s_runtime.lock = NULL;
+            }
+            return ESP_ERR_NO_MEM;
+        }
+        load_recents();
+        s_runtime.recents_loaded = true;
+        if (xTaskCreate(worker_task, "works_runtime", WORKS_WORKER_STACK,
+                        NULL, WORKS_WORKER_PRIORITY, &s_runtime.worker) != pdPASS) {
+            vQueueDelete(s_runtime.commands);
+            vSemaphoreDelete(s_runtime.lock);
+            s_runtime.commands = NULL;
+            s_runtime.lock = NULL;
+            return ESP_ERR_NO_MEM;
+        }
+    }
+    return ESP_OK;
+}
+
+esp_err_t works_runtime_init(const works_runtime_config_t *config)
+{
+    if (config && !config->on_changed) return ESP_ERR_INVALID_ARG;
+    ESP_RETURN_ON_ERROR(works_runtime_prepare(), TAG, "prepare Works runtime");
+    if (config) {
+        xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+        s_runtime.on_changed = config->on_changed;
+        s_runtime.on_changed_ctx = config->user_ctx;
+        xSemaphoreGive(s_runtime.lock);
+    }
+    ESP_RETURN_ON_ERROR(app_registry_register_changed_cb(works_apps_changed, NULL), TAG, "register App listener");
+    return works_runtime_refresh();
+}
+
+esp_err_t works_runtime_get_revision(uint32_t *out_revision)
+{
+    if (!out_revision || !s_runtime.lock) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+    *out_revision = s_runtime.revision;
+    xSemaphoreGive(s_runtime.lock);
+    return ESP_OK;
+}
+
+esp_err_t works_runtime_get_count(size_t *out_count)
+{
+    if (!out_count || !s_runtime.lock) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+    *out_count = s_runtime.item_count;
+    xSemaphoreGive(s_runtime.lock);
+    return ESP_OK;
+}
+
+static void snapshot_item(const works_item_t *item,
+                          works_runtime_item_snapshot_t *out)
+{
+    memset(out, 0, sizeof(*out));
+    strlcpy(out->app_id, item->id, sizeof(out->app_id));
+    strlcpy(out->display_name, item->display_name, sizeof(out->display_name));
+    out->builtin = item->builtin;
+    out->state = item->state;
+    strlcpy(out->last_error, item->last_error, sizeof(out->last_error));
+}
+
+esp_err_t works_runtime_get_item(size_t index,
+                                 works_runtime_item_snapshot_t *out_item)
+{
+    if (!out_item || !s_runtime.lock) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+    if (index >= s_runtime.item_count) {
+        xSemaphoreGive(s_runtime.lock);
+        return ESP_ERR_NOT_FOUND;
+    }
+    snapshot_item(&s_runtime.items[index], out_item);
+    xSemaphoreGive(s_runtime.lock);
+    return ESP_OK;
+}
+
+esp_err_t works_runtime_get_recent(size_t index,
+                                   works_runtime_item_snapshot_t *out_item)
+{
+    if (!out_item || !s_runtime.lock) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+    if (index >= s_runtime.recent_count) {
+        xSemaphoreGive(s_runtime.lock);
+        return ESP_ERR_NOT_FOUND;
+    }
+    works_item_t *item = find_item_locked(s_runtime.recent_ids[index]);
+    if (!item) {
+        xSemaphoreGive(s_runtime.lock);
+        return ESP_ERR_NOT_FOUND;
+    }
+    snapshot_item(item, out_item);
+    xSemaphoreGive(s_runtime.lock);
+    return ESP_OK;
+}
+
+esp_err_t works_runtime_get_by_id(const char *app_id, works_runtime_item_snapshot_t *out_item)
+{
+    if (!app_id || !out_item || !s_runtime.lock) return ESP_ERR_INVALID_STATE;
+    xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+    works_item_t *item = find_item_locked(app_id);
+    if (item) snapshot_item(item, out_item);
+    xSemaphoreGive(s_runtime.lock);
+    return item ? ESP_OK : ESP_ERR_NOT_FOUND;
+}
+
+bool works_runtime_phone_id_is_valid(const char *id)
+{
+    if (!id || strncmp(id, "mb_", 3) != 0 || !app_registry_id_is_valid(id)) return false;
+    const char *p = id + 3;
+    for (int i = 0; i < 16; ++i, ++p) if (!*p || !strchr("0123456789abcdef", *p)) return false;
+    if (strncmp(p, "_v", 2) != 0) return false;
+    p += 2;
+    if (*p < '1' || *p > '9') return false;
+    while (*p >= '0' && *p <= '9') ++p;
+    if (*p++ != '_') return false;
+    for (int i = 0; i < 8; ++i, ++p) if (!*p || !strchr("0123456789abcdef", *p)) return false;
+    return *p == 0;
+}
+
+static esp_err_t reject_readonly(const app_registry_entry_t *entry, void *user_ctx)
+{
+    const char *id = user_ctx;
+    return strcmp(entry->app_id, id) == 0 &&
+           entry->manage_mode == APP_REGISTRY_MANAGE_MODE_READONLY
+               ? ESP_ERR_INVALID_STATE : ESP_OK;
+}
+
+esp_err_t works_runtime_remove(const char *app_id)
+{
+    if (!works_runtime_phone_id_is_valid(app_id)) return ESP_ERR_INVALID_ARG;
+    if (!s_runtime.lock) return ESP_ERR_INVALID_STATE;
+    xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+    works_item_t *item = find_item_locked(app_id);
+    if (s_runtime.deleting_id[0] ||
+        (item && (item->builtin || state_is_active(item->state) || item->job_id[0]))) {
+        xSemaphoreGive(s_runtime.lock);
+        return ESP_ERR_INVALID_STATE;
+    }
+    strlcpy(s_runtime.deleting_id, app_id, sizeof(s_runtime.deleting_id));
+    xSemaphoreGive(s_runtime.lock);
+
+    /* Never hold the runtime lock while entering the registry or its callbacks.
+     * The registry check also protects read-only entries outside the UI's capped catalog. */
+    esp_err_t err = app_registry_foreach(reject_readonly, (void *)app_id);
+    if (err == ESP_OK) err = app_registry_remove(app_id);
+    if (err == ESP_OK || err == ESP_ERR_NOT_FOUND) {
+        err = works_runtime_refresh();
+        if (err == ESP_OK) err = works_runtime_flush();
+    }
+    xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+    s_runtime.deleting_id[0] = '\0';
+    xSemaphoreGive(s_runtime.lock);
+    return err;
+}
+
+static esp_err_t request_state(const char *app_id, int desired)
+{
+    if (!app_id || !app_id[0] || !s_runtime.lock || !s_runtime.commands) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    works_command_t command = {0};
+    strlcpy(command.app_id, app_id, sizeof(command.app_id));
+    uint32_t revision = 0;
+    xSemaphoreTake(s_runtime.lock, portMAX_DELAY);
+    if (strcmp(s_runtime.deleting_id, app_id) == 0) {
+        xSemaphoreGive(s_runtime.lock);
+        return ESP_ERR_INVALID_STATE;
+    }
+    works_item_t *item = find_item_locked(app_id);
+    if (!item) {
+        xSemaphoreGive(s_runtime.lock);
+        return ESP_ERR_NOT_FOUND;
+    }
+    bool start = desired < 0 ? !state_is_active(item->state) : desired != 0;
+    if (desired >= 0) {
+        if ((start && (item->state == WORKS_RUNTIME_RUNNING || item->state == WORKS_RUNTIME_QUEUED)) ||
+            (!start && !state_is_active(item->state)) || (!start && item->state == WORKS_RUNTIME_STOPPING)) {
+            xSemaphoreGive(s_runtime.lock);
+            return ESP_OK;
+        }
+        if (start) {
+            /* The screen is shared. Do not silently interrupt a user's other work. */
+            for (size_t i = 0; i < s_runtime.item_count; ++i) {
+                if (state_is_active(s_runtime.items[i].state)) {
+                    xSemaphoreGive(s_runtime.lock);
+                    return ESP_ERR_INVALID_STATE;
+                }
+            }
+        }
+    }
+    works_runtime_state_t previous = item->state;
+    if (!start) {
+        command.type = WORKS_COMMAND_STOP;
+        strlcpy(command.job_id, item->job_id, sizeof(command.job_id));
+        item->state = WORKS_RUNTIME_STOPPING;
+    } else {
+        command.type = WORKS_COMMAND_START;
+        item->state = WORKS_RUNTIME_QUEUED;
+        item->last_error[0] = '\0';
+    }
+    if (xQueueSend(s_runtime.commands, &command, 0) != pdTRUE) {
+        item->state = previous;
+        xSemaphoreGive(s_runtime.lock);
+        return ESP_ERR_TIMEOUT;
+    }
+    revision = next_revision_locked();
+    xSemaphoreGive(s_runtime.lock);
+    notify_changed(revision);
+    return ESP_OK;
+}
+
+esp_err_t works_runtime_request_toggle(const char *app_id) { return request_state(app_id, -1); }
+esp_err_t works_runtime_set_running(const char *app_id, bool running) { return request_state(app_id, running ? 1 : 0); }

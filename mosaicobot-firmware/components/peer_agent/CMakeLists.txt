@@ -1,0 +1,32 @@
+idf_component_register(
+    SRCS
+        "src/peer_agent.c"
+        "src/peer_net.c"
+        "src/peer_server.c"
+        "src/peer_tools.c"
+        "src/peer_worker.c"
+        "src/peer_caps.c"
+        "src/peer_rpc.c"
+        "src/peer_rpc_archive.c"
+    INCLUDE_DIRS
+        "include"
+    PRIV_INCLUDE_DIRS
+        "src"
+    REQUIRES
+        peer_core
+        esp_common
+    PRIV_REQUIRES
+        claw_cap
+        claw_core
+        claw_manager
+        cap_mcp_server
+        mcp_mdns
+        esp_http_client
+        esp_netif
+        freertos
+        log
+        settings
+        weather_service
+        wifi_manager
+)
+target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-format-truncation)

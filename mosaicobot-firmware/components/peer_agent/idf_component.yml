@@ -1,0 +1,6 @@
+dependencies:
+  espressif/mdns: "^1.10.1"
+  cap_mcp_server:
+    path: ../../third-party/esp-claw/components/claw_capabilities/cap_mcp_server
+  mcp_mdns:
+    path: ../../third-party/esp-claw/components/common/mcp_mdns

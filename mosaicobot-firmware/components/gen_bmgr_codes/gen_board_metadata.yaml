@@ -1,0 +1,194 @@
+version: 1
+board: esp_mosaico
+chip: esp32s31
+
+devices:
+  usb_hs_console:
+    type: custom
+    dependencies:
+      usb_hs_console:
+        path: ${BOARD_PATH}/components/usb_hs_console
+
+  lcd_power_ctrl:
+    type: power_ctrl
+    sub_type: gpio
+    peripherals:
+    - gpio_lcd_en
+
+  display_lcd:
+    type: display_lcd
+    sub_type: spi
+    peripherals:
+    - spi_display
+    dependencies:
+      espressif/esp_lcd_co5300: ^2.2
+      mosaico_boot_splash:
+        path: ${BOARD_PATH}/../../components/mosaico_boot_splash
+    io:
+      reset_gpio_num: 42
+      cs_gpio_num: 50
+
+  button_boot:
+    type: button
+    sub_type: gpio
+    peripherals:
+    - gpio_button_boot
+
+  button_power:
+    type: button
+    sub_type: gpio
+    peripherals:
+    - gpio_button_power
+
+  lcd_touch:
+    type: lcd_touch
+    sub_type: i2c
+    peripherals:
+    - i2c_master
+    dependencies:
+      espressif/esp_lcd_touch_cst9220: ^0.1.0
+    io:
+      int_gpio_num: 6
+
+  audio_dac:
+    type: audio_codec
+    peripherals:
+    - gpio_pa_control
+    - i2s_audio_out
+    - i2c_master
+
+  audio_adc:
+    type: audio_codec
+    peripherals:
+    - i2s_audio_in
+    - i2c_master
+
+  vibration_motor:
+    type: ledc_ctrl
+    peripherals:
+    - ledc_vibration_motor
+
+  nand_flash:
+    type: custom
+    dependencies:
+      espressif/spi_nand_flash: ^1.4.1
+      joltwallet/littlefs: ^1.22.0
+      mosaico_bsp_bmgr_bridge:
+        path: ${BOARD_PATH}/components/mosaico_bsp_bmgr_bridge
+
+  battery_monitor:
+    type: custom
+    peripherals:
+    - i2c_master
+    dependencies:
+      espressif/bq27220:
+        version: ^0.1.0
+
+  imu_sensor:
+    type: custom
+    peripherals:
+    - i2c_master
+    dependencies:
+      espressif2022/bmi270: ^1.1.0
+
+  magnetometer_1:
+    type: custom
+    peripherals:
+    - i2c_master
+    dependencies:
+      tangyumei3535/bmm150_sensorapi:
+        version: ^1.0.0
+
+  magnetometer_2:
+    type: custom
+    peripherals:
+    - i2c_master
+
+  camera:
+    type: camera
+    sub_type: dvp
+    peripherals:
+    - i2c_master
+    io:
+      reset_io: 53
+      pwdn_io: 48
+      data_io_0: 16
+      data_io_1: 15
+      data_io_2: 33
+      data_io_3: 4
+      data_io_4: 14
+      data_io_5: 12
+      data_io_6: 18
+      data_io_7: 13
+      vsync_io: 55
+      de_io: 19
+      pclk_io: 17
+
+peripherals:
+  i2c_master:
+    type: i2c
+    role: master
+    io:
+      sda_io_num: 56
+      scl_io_num: 3
+
+  spi_display:
+    type: spi
+    role: master
+    io:
+      mosi_io_num: 36
+      miso_io_num: 51
+      sclk_io_num: 44
+      quadwp_io_num: 35
+      quadhd_io_num: 9
+
+  gpio_lcd_en:
+    type: gpio
+    role: io
+    io:
+      pin: 60
+
+  i2s_audio_out:
+    type: i2s
+    role: master
+    format: std-out
+    io:
+      mclk: 54
+      bclk: 37
+      ws: 49
+      dout: 52
+      din: 40
+
+  i2s_audio_in:
+    type: i2s
+    role: master
+    format: std-in
+    io:
+      mclk: 54
+      bclk: 37
+      ws: 49
+      dout: 52
+      din: 40
+
+  gpio_pa_control:
+    type: gpio
+    role: io
+    io:
+      pin: 45
+
+  ledc_vibration_motor:
+    type: ledc
+    io:
+      gpio_num: 8
+
+  gpio_button_boot:
+    type: gpio
+    role: io
+    io:
+      pin: 61
+
+  gpio_button_power:
+    type: gpio
+    role: io
+    io:
+      pin: 7

@@ -1,0 +1,16 @@
+dependencies:
+  usb_hs_console:
+    path: ../../boards/esp_mosaico/components/usb_hs_console
+  espressif/esp_lcd_co5300: ^2.2
+  mosaico_boot_splash:
+    path: ../../boards/esp_mosaico/../../components/mosaico_boot_splash
+  espressif/esp_lcd_touch_cst9220: ^0.1.0
+  espressif/spi_nand_flash: ^1.4.1
+  joltwallet/littlefs: ^1.22.0
+  mosaico_bsp_bmgr_bridge:
+    path: ../../boards/esp_mosaico/components/mosaico_bsp_bmgr_bridge
+  espressif/bq27220:
+    version: ^0.1.0
+  espressif2022/bmi270: ^1.1.0
+  tangyumei3535/bmm150_sensorapi:
+    version: ^1.0.0

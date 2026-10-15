@@ -1,0 +1,36 @@
+/.migration-backup/
+# Local outputs and credentials
+**/build/
+**/build-*/
+**/build_*/
+**/managed_components/
+**/.gradle/
+**/.kotlin/
+**/.codex-runs/
+**/.pytest_cache/
+**/__pycache__/
+**/node_modules/
+**/.venv/
+**/.mosaico-state/
+**/.tools/
+**/sdkconfig
+**/sdkconfig.old
+**/local.properties
+**/.env
+**/.env.*
+**/*.jks
+**/*.keystore
+**/*.local.json
+**/.mcp.json
+**/.codex/
+**/.cursor/
+**/.idea/
+**/firmware_output/
+**/artifacts/
+# Private historical runtime evidence is not public source.
+docs/validation/*.bin
+docs/validation/*.txt
+docs/validation/*.json
+# Keep reproducible manifests and board-generated source in this snapshot.
+!**/dependencies.lock
+!mosaicobot-firmware/components/gen_bmgr_codes/**

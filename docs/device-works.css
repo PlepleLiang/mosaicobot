@@ -1,0 +1,23 @@
+/* Device Works management extends the existing phone design, not its scale. */
+#device-works { scroll-margin-top: 12px; }
+.device-works-copy { color: var(--secondary); font-size: 11px; line-height: 1.8; margin: -4px 0 12px; }
+.device-works-list { border: 1px solid var(--line); border-radius: 14px; background: white; overflow: hidden; }
+.device-work-row { display: flex; align-items: center; gap: 10px; padding: 12px; }
+.device-work-row + .device-work-row { border-top: 1px solid var(--line); }
+.device-work-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.device-work-info b { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.device-work-info small { font-size: 10px; color: var(--secondary); }
+.device-work-status { font-size: 9px; color: var(--secondary); }
+.device-work-status.is-running { color: #3e683e; }
+.device-work-delete { color: #925047; width: 40px; height: 44px; flex-shrink: 0; border: 0; background: transparent; }
+.device-work-delete:hover:not(:disabled) { background: #fff0ec; }
+.device-work-delete:disabled { opacity: .35; cursor: not-allowed; }
+.device-works-notice { padding: 10px 12px; border-radius: 10px; background: #f8efda; color: #78592c; font-size: 10px; line-height: 1.6; margin-bottom: 10px; }
+.device-works-empty { padding: 24px 16px; font-size: 11px; color: var(--secondary); line-height: 1.8; text-align: center; }
+.device-works-footnote { margin: 10px 0 0; color: var(--secondary); font-size: 10px; line-height: 1.8; }
+.device-delete-summary { display: flex; align-items: center; gap: 12px; padding: 14px; margin: 16px 0; background: var(--soft); border-radius: 12px; }
+.device-delete-summary b { display: block; font-size: 14px; overflow-wrap: anywhere; }
+.device-delete-summary small { display: block; margin-top: 5px; font-size: 11px; color: var(--secondary); }
+.device-delete-test { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--secondary); }
+#modal-content > .device-delete-error { background: #fff0ec; color: #984437; border-radius: 10px; padding: 12px; }
+.device-delete-outcome { color: #3e683e; }

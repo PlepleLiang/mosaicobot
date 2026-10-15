@@ -1,0 +1,9 @@
+[submodule "mosaicobot-firmware/third-party/esp-claw"]
+	path = mosaicobot-firmware/third-party/esp-claw
+	url = https://github.com/espressif/esp-claw.git
+[submodule "esp-mosaico-vibe-custom/submodule/esp-mosaico-bsp"]
+	path = esp-mosaico-vibe-custom/submodule/esp-mosaico-bsp
+	url = https://github.com/esp-mosaico/esp-mosaico-bsp.git
+[submodule "esp-mosaico-vibe-custom/submodule/raylib-lite-engine"]
+	path = esp-mosaico-vibe-custom/submodule/raylib-lite-engine
+	url = https://github.com/espressif2022/raylib-lite-engine.git

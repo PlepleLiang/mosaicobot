@@ -1,0 +1,2 @@
+# Submodules are registered at the MosaicoBot repository root.
+# Customized esp-mosaico-utils is vendored source, not an upstream gitlink.

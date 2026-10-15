@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#f4f3ef" />
+    <meta
+      name="description"
+      content="MosaicoBot 交互原型：手机表达意图，AI 创造应用，Mosaico 运行并反馈。"
+    />
+    <title>MosaicoBot — 让想法，长出身体。</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="device-apps.js" defer></script>
+    <link rel="stylesheet" href="device-works.css" />
+    <script src="device-works.js" defer></script>
+    <link rel="stylesheet" href="app-center.css" />
+    <script src="app-center.js" defer></script>
+    <script src="app.js" defer></script>
+    <link rel="stylesheet" href="game-mode.css" />
+    <script src="game-mode.js" defer></script>
+  </head>
+  <body>
+    <svg class="svg-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 15v6h16v-6" /></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24">
+          <path d="M12 5v14M5 12h14" />
+        </symbol>
+        <symbol id="i-arrow" viewBox="0 0 24 24">
+          <path d="m7 17 10-10M7 7h10v10" />
+        </symbol>
+        <symbol id="i-send" viewBox="0 0 24 24">
+          <path d="M12 19V5m-6 6 6-6 6 6" />
+        </symbol>
+        <symbol id="i-wifi" viewBox="0 0 24 24">
+          <path
+            d="M3 8a15 15 0 0 1 18 0M6 12a10 10 0 0 1 12 0M9 16a5 5 0 0 1 6 0"
+          />
+          <circle cx="12" cy="20" r=".75" fill="currentColor" stroke="none" />
+        </symbol>
+        <symbol id="i-device" viewBox="0 0 24 24">
+          <rect x="4" y="4" width="16" height="16" rx="5" />
+          <path d="M9 10v4m6-4v4" />
+        </symbol>
+        <symbol id="i-grid" viewBox="0 0 24 24">
+          <rect x="4" y="4" width="6" height="6" rx="1.5" />
+          <rect x="14" y="4" width="6" height="6" rx="1.5" />
+          <rect x="4" y="14" width="6" height="6" rx="1.5" />
+          <rect x="14" y="14" width="6" height="6" rx="1.5" />
+        </symbol>
+        <symbol id="i-spark" viewBox="0 0 24 24">
+          <path d="m12 3 2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6Z" />
+        </symbol>
+        <symbol id="i-check" viewBox="0 0 24 24">
+          <path d="m5 12 4 4L19 6" />
+        </symbol>
+        <symbol id="i-close" viewBox="0 0 24 24">
+          <path d="m6 6 12 12M6 18 18 6" />
+        </symbol>
+        <symbol id="i-mic" viewBox="0 0 24 24">
+          <rect x="9" y="3" width="6" height="12" rx="3" />
+          <path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3" />
+        </symbol>
+        <symbol id="i-clock" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 6v6l4 2" />
+        </symbol>
+        <symbol id="i-level" viewBox="0 0 24 24">
+          <path d="M3 12h18M12 3v18" />
+          <circle cx="12" cy="12" r="6" />
+        </symbol>
+        <symbol id="i-game" viewBox="0 0 24 24">
+          <path
+            d="M7 7h10c2 0 3 2 3.5 5l.5 5c0 2-2 3-3.5 1L15 16H9l-2.5 2C5 20 3 19 3 17l.5-5C4 9 5 7 7 7Z"
+          />
+          <path d="M8 10v5m-2.5-2.5h5m5-1h.1m2 2h.1" />
+        </symbol>
+        <symbol id="i-play" viewBox="0 0 24 24">
+          <path d="m8 4 12 8-12 8Z" />
+        </symbol>
+        <symbol id="i-pause" viewBox="0 0 24 24">
+          <path d="M8 5v14M16 5v14" />
+        </symbol>
+        <symbol id="i-stop" viewBox="0 0 24 24">
+          <rect x="6" y="6" width="12" height="12" rx="2" />
+        </symbol>
+        <symbol id="i-back" viewBox="0 0 24 24">
+          <path d="M19 12H5m6-6-6 6 6 6" />
+        </symbol>
+        <symbol id="i-refresh" viewBox="0 0 24 24">
+          <path d="M20 8a8 8 0 1 0 0 8M20 3v5h-5" />
+        </symbol>
+        <symbol id="i-code" viewBox="0 0 24 24">
+          <path d="m7 7-5 5 5 5m10-10 5 5-5 5M14 4l-4 16" />
+        </symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24">
+          <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" />
+        </symbol>
+        <symbol id="i-battery" viewBox="0 0 24 24">
+          <rect x="2" y="7" width="18" height="10" rx="2" />
+          <path d="M23 10v4M5 10h11v4H5Z" fill="currentColor" />
+        </symbol>
+      </defs>
+    </svg>
+    <header class="site-header">
+      <a class="wordmark" href="#" aria-label="MosaicoBot 首页"
+        ><span class="brand-mark" aria-hidden="true"
+          ><i></i><i></i><i></i><i></i></span
+        >Mosaico<span>Bot</span></a
+      >
+      <nav class="site-nav" aria-label="设计稿导航">
+        <a class="selected" href="#prototype">体验原型</a
+        ><a href="#principles"
+          >设计思路 <svg class="icon"><use href="#i-arrow" /></svg
+        ></a>
+      </nav>
+      <span class="edition">DESIGN STUDY <b>07 / APP CENTER</b></span>
+    </header>
+    <main aria-label="手机与设备主交互设计">
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow"><span></span> YOUR POCKET HARDWARE STUDIO</p>
+          <h1 id="page-title">让想法，<span>长出身体。</span></h1>
+          <p class="intro-copy">在手机上说出意图，让 Mosaico 把它变成现实。</p>
+        </div>
+        <p class="intro-aside">
+          一个想法。一件作品。<br />无限种 Mosaico。<span
+            >从「生成贪食蛇」开始试试
+            <svg class="icon"><use href="#i-arrow" /></svg
+          ></span>
+        </p>
+      </section>
+      <section
+        class="prototype"
+        id="prototype"
+        aria-label="手机与 Mosaico 联动交互原型"
+      >
+        <div class="review-bar">
+          <span
+            ><span class="demo-dot"></span> 交互演示
+            <small>所有连接与运行数据均为模拟</small></span
+          >
+          <div>
+            <button id="review-device-works" class="text-button">Works 作品 · 删除提案 ↗</button>
+            <button id="review-center" class="text-button">应用中心 · 新提案 ↗</button>
+            <button id="review-game" class="text-button">游戏模式 · 交互提案 ↗</button>
+            <button id="scenario-button" class="text-button">
+              <svg class="icon"><use href="#i-code" /></svg> 测试场景</button
+            ><button
+              id="reset-button"
+              class="text-button"
+              aria-label="重置原型"
+            >
+              <svg class="icon"><use href="#i-refresh" /></svg><span>重置</span>
+            </button>
+          </div>
+        </div>
+        <div class="stage">
+          <section class="phone-column" aria-label="手机 App 原型">
+            <div class="object-label">
+              <span>01 / THE MIND</span><span>手机 · 创造与编排</span>
+            </div>
+            <div class="phone">
+              <div class="phone-screen">
+                <div class="system-bar" aria-hidden="true">
+                  <b>9:41</b><span class="camera-hole"></span
+                  ><span
+                    ><svg class="icon"><use href="#i-wifi" /></svg
+                    ><svg class="icon"><use href="#i-battery" /></svg
+                  ></span>
+                </div>
+                <header class="app-header">
+                  <div>
+                    <span class="app-wordmark"
+                      >MosaicoBot<svg
+                        class="icon tiny-orange"
+                        aria-hidden="true"
+                      >
+                        <use href="#i-spark" /></svg></span
+                    ><span class="app-subtitle">随身 AI 硬件工坊</span>
+                  </div>
+                  <button
+                    class="icon-button"
+                    id="new-button"
+                    aria-label="开始新的创作"
+                  >
+                    <svg class="icon"><use href="#i-plus" /></svg>
+                  </button>
+                </header>
+                <button class="connection-pill" id="connection-button">
+                  <span class="connection-icon"
+                    ><svg class="icon"><use href="#i-device" /></svg></span
+                  ><span
+                    ><strong id="connection-name">我的 Mosaico</strong
+                    ><small id="connection-detail"
+                      >同一 Wi-Fi · 已连接</small
+                    ></span
+                  ><span class="connected-indicator" id="connection-state"
+                    ><i></i> 在线</span
+                  ><svg class="icon chevron"><use href="#i-arrow" /></svg>
+                </button>
+                <section class="app-panel" id="create-panel" aria-label="创作">
+                  <div class="conversation" id="conversation">
+                <div class="offline-banner" id="offline-banner" hidden>
+                  连接已断开，创作仍保留。<button id="reconnect-inline">
+                    重新连接
+                  </button>
+                </div>
+
+                    <div class="welcome" id="welcome">
+                      <p class="mini-label">MAKE SOMETHING REAL</p>
+                      <h2>今天，让它<br />变成什么？</h2>
+                      <p>
+                        一个小游戏，一只计时钟。<br />让手机 Agent 为身体创造新的本领。
+                      </p>
+                      <div class="suggestions" aria-label="创作灵感">
+                        <button data-prompt="生成贪食蛇">
+                          <span class="suggestion-icon peach"
+                            ><svg class="icon">
+                              <use href="#i-game" /></svg></span
+                          ><span
+                            ><b>生成贪食蛇</b
+                            ><small>让方屏变成掌上游戏机</small></span
+                          ><svg class="icon"><use href="#i-arrow" /></svg>
+                        </button>
+                        <button data-prompt="做一个 25 分钟的专注时钟">
+                          <span class="suggestion-icon sand"
+                            ><svg class="icon">
+                              <use href="#i-clock" /></svg></span
+                          ><span
+                            ><b>做一个 25 分钟的专注时钟</b
+                            ><small>把时间，放到眼前</small></span
+                          ><svg class="icon"><use href="#i-arrow" /></svg>
+                        </button>
+
+                      </div>
+                    </div>
+                    <div
+                      id="messages"
+                      class="messages"
+                      aria-live="polite"
+                      aria-relevant="additions text"
+                    ></div>
+                    <div
+                      id="job-card"
+                      class="job-card"
+                      role="status"
+                      aria-live="polite"
+                      aria-atomic="true"
+                      hidden
+                    ></div>
+                    <div
+                      id="result-card"
+                      class="result-card"
+                      aria-live="polite"
+                      hidden
+                    ></div>
+                  </div>
+                  <form class="composer" id="composer">
+                    <label for="prompt-input" id="composer-label">你想让 Mosaico 做什么？</label>
+                    <textarea id="prompt-input" rows="2" maxlength="600" placeholder="说个想法，让它发生…"></textarea>
+                    <div class="composer-bottom">
+                      <span id="composer-hint"><i></i> 手机 Agent</span>
+                      <button class="send-button" id="send-button" type="submit" aria-label="发送创作意图">
+                        <svg class="icon"><use href="#i-send" /></svg>
+                      </button>
+                    </div>
+                  </form>
+                  <p class="composer-footnote">你负责想象，Mosaico 负责发生。</p>
+                </section>
+                <section
+                  class="app-panel scroll-panel"
+                  id="works-panel"
+                  aria-label="应用"
+                  hidden
+                >
+                  <div class="panel-heading">
+                    <p class="mini-label">ONE BODY, MORE POSSIBILITIES</p>
+                    <h2>应用</h2>
+                    <p>原来的本领，加上你的新想法。</p>
+                  </div>
+                  <div class="app-segments" role="group" aria-label="应用分类">
+                    <button data-app-group="mine" aria-pressed="true">
+                      我的创作 <span id="work-count">0</span>
+                    </button>
+                    <button data-app-group="center" aria-pressed="false">应用中心</button>
+                    <button data-app-group="device" aria-pressed="false">
+                      设备应用 <span id="device-app-count">14</span>
+                    </button>
+                  </div>
+                  <div id="my-apps">
+                    <button class="game-discovery" id="browse-games"><span class="game-discovery-icon" aria-hidden="true"><svg class="icon"><use href="#i-game"/></svg></span><span><b>让手机，成为手柄</b><small>横屏通用手柄 · 在设备上选游戏</small></span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+                    <button class="center-discovery" id="browse-center"><span class="center-discovery-mark" aria-hidden="true">+</span><span><b>让好想法，彼此接力</b><small>应用中心 · 发现、带走、再创造</small></span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+                    <div class="library-toolbar"><span>保存在这台手机</span><button id="library-upload" class="text-button"><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg>上传作品</button></div>
+                    <div id="works-list"></div>
+                    <button class="builtin-discovery" id="browse-builtin">
+                      <span class="connection-icon"
+                        ><svg class="icon" aria-hidden="true">
+                          <use href="#i-grid" /></svg></span
+                      ><span
+                        ><b>它原本就有很多本领</b
+                        ><small>Camera、Music、IMU… 去看看</small></span
+                      ><svg class="icon" aria-hidden="true">
+                        <use href="#i-arrow" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div id="builtin-apps" hidden>
+                    <div id="builtin-list"></div>
+                    <p class="app-boundary">
+                      原有入口完整保留。打开与反馈为本地模拟，远程控制接口仍需接入。
+                    </p>
+                  </div>
+                  <div id="builtin-detail" hidden></div>
+                  <div id="app-center" hidden></div>
+                </section>
+                <section
+                  class="app-panel scroll-panel"
+                  id="device-panel"
+                  aria-label="设备管理"
+                  hidden
+                >
+                  <div class="panel-heading">
+                    <p class="mini-label">YOUR PHYSICAL COMPANION</p>
+                    <h2>我的 Mosaico</h2>
+                    <p>它在这里，等待下一个想法。</p>
+                  </div>
+                  <div class="device-info-card">
+                    <svg class="icon"><use href="#i-device" /></svg
+                    ><b>Mosaico</b
+                    ><span id="device-page-status">已连接 / 局域网（演示）</span
+                    ><button class="secondary-button" id="manage-connection">
+                      管理连接
+                    </button>
+                  </div>
+                  <h3 class="section-label">这副身体能做什么</h3>
+                  <div class="capability-grid">
+                    <div><b>480 × 480</b><span>方形触摸屏</span></div>
+                    <div><b>IMU</b><span>感知姿态</span></div>
+                    <div><b>Audio</b><span>麦克风与扬声器</span></div>
+                    <div><b>Camera</b><span>视觉输入</span></div>
+                  </div>
+                  <p class="safety-note">硬件规格概览 · 当前手机生成仅接入屏幕 / 触摸</p>
+                  <div class="setting-row">
+                    <span
+                      ><b>准备好后自动运行</b
+                      ><small>暂未开放 · 当前每个版本确认后运行</small></span
+                    ><input
+                      id="auto-run"
+                      type="checkbox"
+                      role="switch"
+                      disabled
+                      aria-label="准备好后自动运行"
+                    />
+                  </div>
+                  <p class="safety-note">
+                    相机、录音和外部执行器需单独授权。当前连接仅验证接口，不等于安全配对。
+                  </p>
+                  <button class="secondary-button full-width" id="device-talk">
+                    和设备 Claw 对话
+                  </button>
+                  <details class="phone-agent-settings"><summary>手机 Agent <small>负责创作，与设备 CLAW 独立</small></summary><p>模型与接口设置、连接测试在这里管理。Key 不同步到设备。本原型不接收或存储密钥。</p></details>
+                </section>
+                <nav class="bottom-nav" aria-label="手机主导航">
+                  <button data-tab="create" aria-current="page">
+                    <svg class="icon"><use href="#i-spark" /></svg
+                    ><span>创作</span></button
+                  ><button data-tab="works">
+                    <svg class="icon"><use href="#i-grid" /></svg
+                    ><span>应用</span></button
+                  ><button data-tab="device">
+                    <svg class="icon"><use href="#i-device" /></svg
+                    ><span>设备</span>
+                  </button>
+                </nav>
+                <div class="gesture-bar" aria-hidden="true"></div>
+              </div>
+            </div>
+          </section>
+          <div class="connection-bridge" aria-hidden="true">
+            <span></span><svg class="icon"><use href="#i-wifi" /></svg
+            ><span></span>
+          </div>
+          <section class="hardware-column" aria-label="Mosaico 硬件模拟器">
+            <div class="object-label">
+              <span>02 / THE BODY</span><span>Mosaico · 系统界面 06</span>
+            </div>
+            <div class="hardware-topline">
+              <span class="hardware-tag"
+                ><i id="hardware-dot"></i
+                ><span id="hardware-status">已就绪，等你创造</span></span
+              ><span class="mono">MOSAICO — 7C4A</span>
+            </div>
+            <div class="hardware-shell">
+              <div class="hardware-screen">
+                <canvas
+                  id="device-canvas"
+                  width="480"
+                  height="480"
+                  tabindex="0"
+                  aria-label="Mosaico 模拟屏。默认时钟首页，可切换原有应用主屏。贪食蛇支持方向键或滑动控制。"
+                ></canvas>
+                <div
+                  id="device-hotspots"
+                  class="device-hotspots"
+                  role="group"
+                  aria-label="模拟设备触摸入口"
+                ></div>
+                <div class="screen-chip" id="screen-chip">本地交互模拟</div>
+              </div>
+            </div>
+            <div class="hardware-shadow" aria-hidden="true"></div>
+            <nav class="hardware-navigation" aria-label="模拟设备导航">
+              <button id="hardware-back" class="text-button">
+                <svg class="icon" aria-hidden="true"><use href="#i-back" /></svg
+                >返回
+              </button>
+              <div class="hub-pages" role="group" aria-label="设备主屏分页">
+                <button data-hub-page="0" aria-pressed="true">时钟首页</button
+                ><button data-hub-page="1" aria-pressed="false">应用 1</button
+                ><button data-hub-page="2" aria-pressed="false">应用 2</button>
+              </div>
+              <button
+                id="hardware-home"
+                class="icon-button"
+                aria-label="退出应用并回到设备时钟首页"
+              >
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-grid" />
+                </svg>
+              </button>
+            </nav>
+            <div class="hardware-caption">
+              <svg class="icon pixel-mark" aria-hidden="true">
+                <use href="#i-grid" /></svg
+              ><span
+                >数字时钟与原有应用，一起焕新。<br /><strong
+                  ><a href="#hardware-proposal-title">在本页探索全部系统画面 ↓</a></strong
+                ></span
+              ><span class="display-spec">480 × 480<br />TOUCH DISPLAY</span>
+            </div>
+            <div class="physical-controls" id="physical-controls" hidden>
+              <div class="direction-pad" id="direction-pad">
+                <button data-direction="left" aria-label="向左">
+                  <svg class="icon"><use href="#i-back" /></svg></button
+                ><button data-direction="up" aria-label="向上">
+                  <svg class="icon rotate-up">
+                    <use href="#i-back" />
+                  </svg></button
+                ><button data-direction="down" aria-label="向下">
+                  <svg class="icon rotate-down">
+                    <use href="#i-back" />
+                  </svg></button
+                ><button data-direction="right" aria-label="向右">
+                  <svg class="icon rotate-right"><use href="#i-back" /></svg>
+                </button>
+              </div>
+              <button id="pause-button" class="text-button">
+                <svg class="icon"><use href="#i-pause" /></svg
+                ><span>暂停</span></button
+              ><button
+                id="restart-button"
+                class="icon-button"
+                aria-label="重新开始应用"
+              >
+                <svg class="icon"><use href="#i-refresh" /></svg>
+              </button>
+            </div>
+            <div class="level-controls" id="level-controls" hidden>
+              <label for="tilt-input">模拟设备倾斜</label
+              ><input
+                type="range"
+                id="tilt-input"
+                min="-30"
+                max="30"
+                value="0"
+              /><output id="tilt-output">0°</output>
+            </div>
+            <div class="feedback-strip" id="feedback-strip">
+              <span class="feedback-icon"
+                ><svg class="icon"><use href="#i-wifi" /></svg
+              ></span>
+              <div>
+                <b id="feedback-title">手机与身体，保持连接</b>
+                <p id="feedback-copy">局域网传递应用，设备回传运行状态。</p>
+              </div>
+              <span class="feedback-badge" id="feedback-badge">LAN</span>
+            </div>
+            <div class="journey" aria-label="任务进度">
+              <span id="journey-idea" class="active"><b>01</b> 说出意图</span
+              ><i></i><span id="journey-build"><b>02</b> 创造应用</span><i></i
+              ><span id="journey-run"><b>03</b> 运行反馈</span>
+            </div>
+          </section>
+        </div>
+        <div class="stage-footer">
+          <span><i></i> 少一点配置，多一点「我想试试」。</span
+          ><span>PHONE AGENT × MOSAICO RUNTIME</span>
+        </div>
+      </section>
+      <section
+        class="principles"
+        id="principles"
+        aria-labelledby="principles-title"
+      >
+        <div class="principles-heading">
+          <p class="eyebrow">DESIGNED AROUND ONE CONTINUOUS LOOP</p>
+          <h2 id="principles-title">从一句话，到触手可及。</h2>
+          <p>创作不在「生成完成」时结束，而在设备开始回应时成立。</p>
+        </div>
+        <div class="principle-grid">
+          <article>
+            <span>01 / INTENT</span>
+            <h3>先说想法，不先选模式</h3>
+            <p>
+              手机 Agent 理解创作与修改意图。设备 Claw
+              有独立入口，执行者始终清楚。
+            </p>
+          </article>
+          <article>
+            <span>02 / MAKE</span>
+            <h3>等待，也是一段清楚的过程</h3>
+            <p>
+              生成、检查、部署、确认运行连续呈现。失败停在当前步骤，不让灵感重新开始。
+            </p>
+          </article>
+          <article>
+            <span>03 / FEEDBACK</span>
+            <h3>看到效果，接着说「再改一点」</h3>
+            <p>
+              作品保留版本与运行回执。断连保留上下文，物理设备继续自己的运行。
+            </p>
+          </article>
+        </div>
+        <a class="documentation-link" href="interaction.md"
+          >阅读交互与技术边界说明 <svg class="icon"><use href="#i-arrow" /></svg
+        ></a>
+      </section>
+      <section class="hardware-proposal" aria-labelledby="hardware-proposal-title">
+        <p class="eyebrow">MOSAICO / SYSTEM UI · 06</p>
+        <h2 id="hardware-proposal-title">设备的新表情：石墨仪表，信号橙</h2>
+        <p>设备系统视觉已整合到主设计稿：时钟、两页应用、Works、下拉控制栏、通知、息屏、充电和模块插入。保留原有 11 个主屏入口与 Works 预装作品；以下可直接切换和操作，数据为原型示例。</p>
+        <iframe class="hardware-system-preview" src="hardware-redesign/index.html?embed=1" title="Mosaico 系统界面 06 交互设计" loading="lazy"></iframe>
+        <img src="hardware-redesign/overview.png" alt="Mosaico 九屏新视觉设计：时钟首页、两页原应用、Works、下拉控制栏、通知、息屏、充电和模块插入；固定方屏，石墨底色与信号橙" loading="lazy">
+        <a class="documentation-link" href="hardware-redesign/index.html">打开可交互设备设计稿 ↗</a>
+      </section>
+    </main>
+    <footer class="site-footer" aria-label="主设计稿页脚">
+      <span>MosaicoBot <span>—</span> Make the physical programmable.</span
+      ><span>概念交互原型 · 不连接真实硬件或 AI 服务</span>
+    </footer>
+    <dialog id="game-mode" aria-labelledby="game-review-title">
+      <div class="gp-review-header"><div><span>09 / UNIVERSAL CONTROLLER</span><h2 id="game-review-title">一个手柄，交给游戏定义。</h2><p>交互预览 · 首版已实现，网页不连接真实设备</p></div><button id="gp-close-review" aria-label="关闭游戏模式预览">关闭预览 ×</button></div>
+      <div class="gp-rotate"><svg class="icon" aria-hidden="true"><use href="#i-game"/></svg><h3>横过来，双手开玩。</h3><p>原生 App 进入游戏模式后切换横屏。<br>网页预览请横放手机或加宽窗口，手柄不会被缩小。</p><button id="gp-portrait-exit">返回主设计稿</button></div>
+      <div class="gp-landscape-frame"><section id="gp-controller" aria-label="横屏通用游戏手柄"></section></div>
+      <section class="gp-review-tools" aria-label="屏外评审工具，不属于手机 App">
+        <div class="gp-monitor"><span class="gp-eyebrow">MOSAICO / 输入观察台 · 本地模拟</span><h3 id="gp-observer-title">连接后，在 Mosaico 上选游戏</h3><p>这里仅观察标准输入，不运行模拟器、Lua 或 ROM。</p><output id="gp-observer">LX 0.00 · LY 0.00 / RX 0.00 · RY 0.00<br>BUTTONS / 全部释放</output></div>
+        <div class="gp-scenarios"><label for="gp-scenario">评审场景 · 不是真实设备状态</label><select id="gp-scenario"><option value="ready">自动连接 · 通道就绪</option><option value="offline">未连接 · 自动扫描与手动重试</option><option value="waiting_game">已连接 · 等待游戏运行</option><option value="unsupported">固件未接入通用手柄</option><option value="busy">手柄控制权被占用</option><option value="lost">连接中断</option><option value="background">退后台后返回</option><option value="reboot">设备重启 · 会话失效</option></select><p>方向键 / WASD：十字键；J/K/U/I：A/B/X/Y。摇杆可拖动，Tab 聚焦后用方向键调节、Space 回中。</p><a href="game-mode.md">阅读新版交互文档 ↗</a></div>
+      </section>
+    </dialog>
+    <dialog id="modal" aria-labelledby="modal-title">
+      <div class="modal-header">
+        <span class="mini-label" id="modal-eyebrow">MOSAICOBOT</span
+        ><button class="icon-button" id="modal-close" aria-label="关闭弹窗">
+          <svg class="icon"><use href="#i-close" /></svg>
+        </button>
+      </div>
+      <h2 id="modal-title"></h2>
+      <div id="modal-content"></div>
+    </dialog>
+    <div class="toast" id="toast" role="status" hidden></div>
+  </body>
+</html>

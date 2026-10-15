@@ -1,0 +1,6 @@
+{
+  "events": [
+    {"frame": 61, "type": "pointer", "track_id": 0, "x": 240, "y": 240, "pressed": true},
+    {"frame": 61, "type": "pointer", "track_id": 0, "x": 240, "y": 240, "pressed": false}
+  ]
+}

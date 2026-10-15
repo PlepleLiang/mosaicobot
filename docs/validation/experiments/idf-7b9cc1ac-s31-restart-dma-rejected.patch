@@ -1,0 +1,46 @@
+diff --git a/components/esp_system/port/soc/esp32s31/system_internal.c b/components/esp_system/port/soc/esp32s31/system_internal.c
+index c7d9a6cb..0ca8d0a8 100644
+--- a/components/esp_system/port/soc/esp32s31/system_internal.c
++++ b/components/esp_system/port/soc/esp32s31/system_internal.c
+@@ -26,6 +26,9 @@
+ #endif
+ #include "esp_private/cache_err_int.h"
+ #include "hal/uart_ll.h"
++#include "hal/gdma_ll.h"
++#include "hal/axi_dma_ll.h"
++#include "hal/dma2d_ll.h"
+ #include "hal/sec_ll.h"
+ #include "esp_memory_utils.h"
+ 
+@@ -49,6 +52,31 @@ void esp_system_reset_modules_on_exit(void)
+         }
+     }
+ 
++    // CPU-only restart leaves DMA running. Stop AXI masters without interrupting
++    // an outstanding bus transaction, as in the ESP32-P4 restart implementation.
++    // The RTC watchdog armed by esp_restart_noos bounds a stalled abort wait.
++    if (HP_SYS_CLKRST.axi_pdma_ctrl0.reg_axi_pdma_sys_clk_en) {
++        for (int i = 0; i < GDMA_LL_AXI_PAIRS_PER_GROUP; i++) {
++            axi_dma_ll_tx_abort(AXI_DMA_LL_GET_HW(0), i, true);
++            axi_dma_ll_rx_abort(AXI_DMA_LL_GET_HW(0), i, true);
++            while (!axi_dma_ll_tx_is_reset_avail(AXI_DMA_LL_GET_HW(0), i));
++            while (!axi_dma_ll_rx_is_reset_avail(AXI_DMA_LL_GET_HW(0), i));
++        }
++    }
++    if (dma2d_ll_is_bus_clock_enabled(0)) {
++        for (int i = 0; i < DMA2D_LL_GET(RX_CHANS_PER_INST); i++) {
++            dma2d_ll_rx_abort(DMA2D_LL_GET_HW(0), i, true);
++            while (!dma2d_ll_rx_is_reset_avail(DMA2D_LL_GET_HW(0), i));
++        }
++        for (int i = 0; i < DMA2D_LL_GET(TX_CHANS_PER_INST); i++) {
++            dma2d_ll_tx_abort(DMA2D_LL_GET_HW(0), i, true);
++            while (!dma2d_ll_tx_is_reset_avail(DMA2D_LL_GET_HW(0), i));
++        }
++    }
++    // AHB DMA (including I2S RX) must not write into the next image's memory.
++    SET_PERI_REG_MASK(HP_SYS_CLKRST_AHB_PDMA_CTRL0_REG, HP_SYS_CLKRST_REG_AHB_PDMA_RST_EN);
++    CLEAR_PERI_REG_MASK(HP_SYS_CLKRST_AHB_PDMA_CTRL0_REG, HP_SYS_CLKRST_REG_AHB_PDMA_RST_EN);
++
+     CLEAR_PERI_REG_MASK(HP_SYSTEM_ECC_MEM_LP_CTRL_REG, HP_SYSTEM_ECC_MEM_LP_EN);
+     SET_PERI_REG_MASK(HP_SYSTEM_ECC_MEM_LP_CTRL_REG, HP_SYSTEM_ECC_MEM_LP_FORCE_CTRL);
+     // Reset the clock source selection to an always-on source (XTAL), otherwise if the clock source

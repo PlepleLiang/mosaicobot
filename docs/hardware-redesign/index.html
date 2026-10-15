@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mosaico · 设备界面设计评审 06</title>
+    <meta
+      name="description"
+      content="Mosaico 480 方屏界面设计：保留应用和下拉栏，只更新视觉与信息层级。"
+    />
+    <link rel="stylesheet" href="design.css" />
+    <script src="design.js" defer></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <a href="../index.html" class="wordmark"
+        ><span class="brand-mark" aria-hidden="true"
+          ><i></i><i></i><i></i><i></i></span
+        >Mosaico<span class="wordmark-tail"> / SYSTEM UI</span></a
+      >
+      <span class="revision">DESIGN REVIEW <b>06</b></span>
+    </header>
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">A PROGRAMMABLE BODY. A FAMILIAR SOUL.</p>
+          <h1 id="page-title">新的表情，<br />熟悉的 Mosaico<span>。</span></h1>
+        </div>
+        <div class="intro-note">
+          <span class="review-badge">已确认 · 系统界面 06</span>
+          <p>
+            石墨底色、清晰数字、克制的信号橙。<br />让每一屏更有秩序，让原有能力留在原位。
+          </p>
+          <p class="disclaimer">
+            本地交互演示，数值均为示例；不连接手机、模型或真实设备。
+          </p>
+        </div>
+      </section>
+
+      <section class="workbench" aria-label="设备界面交互评审">
+        <nav class="scene-nav" aria-label="选择评审画面">
+          <p class="eyebrow">01 / EXPLORE THE SYSTEM</p>
+          <div id="scene-selectors"></div>
+          <a href="#all-screens" class="gallery-link"
+            >查看全套画面 <span aria-hidden="true">↘</span></a
+          >
+        </nav>
+        <div class="preview-column">
+          <h2 class="sr-only">Mosaico 交互预览</h2>
+          <div class="preview-caption">
+            <span>480 × 480 <b>·</b> SQUARE DISPLAY</span><span>UI ONLY</span>
+          </div>
+          <div class="device-frame main-frame">
+            <div class="screen-window">
+              <div
+                id="device-screen"
+                class="device-screen"
+                role="region"
+                aria-label="Mosaico 交互画面"
+              ></div>
+            </div>
+          </div>
+          <div class="review-actions" aria-label="手势的评审替代操作">
+            <button type="button" data-review="previous">← 上一页</button
+            ><button type="button" data-review="drawer">下拉控制栏</button
+            ><button type="button" data-review="back">返回 / 收起</button
+            ><button type="button" data-review="next">下一页 →</button>
+          </div>
+          <p class="gesture-note">
+            Hub 左右滑动翻页 · 顶部下拉控制栏 · Esc 返回<br />这组屏幕外按钮只用于评审，不是新增设备按键。
+          </p>
+          <p id="feedback" role="status" aria-live="polite">
+            当前为首页。点击应用可检查入口与返回关系。
+          </p>
+        </div>
+        <aside class="inspector" aria-labelledby="scene-title">
+          <p id="scene-index" class="eyebrow"></p>
+          <h2 id="scene-title"></h2>
+          <p id="scene-description" class="description"></p>
+          <div class="annotation">
+            <span>视觉调整</span>
+            <p id="scene-visual"></p>
+          </div>
+          <div class="annotation">
+            <span>保留边界</span>
+            <p id="scene-boundary"></p>
+          </div>
+          <div id="state-tools" class="state-tools"></div>
+          <div class="dimension-note">
+            <span>480</span>
+            <div></div>
+            <span>固定比例画布<br />按预览容器等比缩放</span>
+          </div>
+        </aside>
+      </section>
+
+      <section
+        id="all-screens"
+        class="gallery-section"
+        aria-labelledby="gallery-title"
+      >
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">02 / ONE VISUAL LANGUAGE</p>
+            <h2 id="gallery-title">从点亮，到每一次触摸。</h2>
+          </div>
+          <p>
+            9 个系统画面 · 相同网格、图标与状态语言<br />应用入口完整保留，应用内部业务界面本轮不重写。<br />设计提案
+            · 示例数据 · 尚未写入设备
+          </p>
+        </div>
+        <div id="screen-gallery" class="screen-gallery"></div>
+      </section>
+
+      <section class="design-contract" aria-labelledby="contract-title">
+        <div>
+          <p class="eyebrow">03 / DESIGN CONTRACT</p>
+          <h2 id="contract-title">换外观，不换习惯。</h2>
+          <p>界面是设备能力的呈现，<br />不是一次业务重构。</p>
+          <a href="README.md">阅读设计与实现边界 ↗</a>
+        </div>
+        <div class="contract-list">
+          <article>
+            <span>01</span>
+            <div>
+              <h3>11 个原有入口，一个不少</h3>
+              <p>
+                Camera / CLAW / Works；Settings / IMU / Album / Music / Bricks /
+                Weather；Interaction / Partner。Works 另保留 Dino、Flappy
+                Bird、Album 与用户作品。
+              </p>
+            </div>
+          </article>
+          <article>
+            <span>02</span>
+            <div>
+              <h3>下拉栏保留原控制区域</h3>
+              <p>
+                连接、音乐入口、左右模块、音量与亮度。预留项保持 Not
+                Supported，不添加虚构的播放控制、传感器数据或在线状态。
+              </p>
+            </div>
+          </article>
+          <article>
+            <span>03</span>
+            <div>
+              <h3>先确认，再做设备实现</h3>
+              <p>
+                数字时钟与状态文字需要少量显示绑定调整。确认后才进入 GSP
+                场景、模拟器与实机验收；本页不是固件运行证据。
+              </p>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <span>Mosaico / Graphite instrument · 2026.10</span
+      ><span>LOCAL PROTOTYPE · NO DEVICE ACCESS</span>
+    </footer>
+  </body>
+</html>
