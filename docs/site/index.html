@@ -62,7 +62,7 @@
           </div>
           <span class="device-caption mono" aria-hidden="true">ONE SCREEN. MANY LIVES.</span>
         </div>
-        <div class="form-description"><div><strong id="form-title">贴近日常，也表达自己。</strong><p id="form-description">手机背面的独立方屏。表情、签名、光点与专注，让背面也有自己的语言。</p></div><div class="mount-choice" id="mount-choice" hidden><button data-mount="bag" aria-pressed="true">背包</button><button data-mount="phone" aria-pressed="false">手机</button></div></div>
+        <div class="form-description"><div><strong id="form-title">贴近日常，也表达自己。</strong><p id="form-description">正面手机与独立方屏按原型尺寸并列展示；背贴是使用概念，非缩小版附件或磁吸承诺。</p></div><div class="mount-choice" id="mount-choice" hidden><button data-mount="bag" aria-pressed="true">背包</button><button data-mount="phone" aria-pressed="false">手机</button></div></div>
         <p class="concept-note">外观与挂载方式为概念示意，不代表附件量产或磁吸能力。</p>
         <div class="screen-console">
           <div class="scene-heading"><div><span class="eyebrow">正在方屏上</span><strong id="scene-title">像素表情</strong></div><span id="scene-status" role="status" aria-live="polite">待开始 · 本地模拟</span></div>
@@ -85,7 +85,12 @@
           <form id="create-form">
             <label for="intent">你想让 Mosaico 做什么？</label>
             <textarea id="intent" maxlength="160" rows="3" placeholder="例如：做一个橙色、慢速的贪食蛇" required aria-describedby="template-boundary"></textarea>
-            <div class="prompt-examples" role="group" aria-label="创作示例"><button type="button" data-prompt="做一个橙色慢速贪食蛇">橙色贪食蛇</button><button type="button" data-prompt="做一个专注5分钟计时器">专注 5 分钟</button><button type="button" data-prompt="做一个像素宠">像素宠</button><button type="button" data-prompt="做一个签名">个性签名</button></div>
+            <div class="featured-prompts" role="group" aria-label="精选创作灵感">
+               <button type="button" data-prompt="做一个蓝色慢速飞机"><span>01 / NEON FLIGHT</span>霓虹飞行<small>星尘航道 · 蓝色慢速飞机</small></button>
+               <button type="button" data-prompt="做一个绿色专注5分钟"><span>02 / ORBITAL FOCUS</span>轨道专注<small>留白与光环 · 专注 5 分钟</small></button>
+               <button type="button" data-prompt="做一个粉色像素宠"><span>03 / PIXEL COMPANION</span>像素伙伴<small>小小回应 · 粉色像素宠</small></button>
+             </div>
+             <div class="prompt-examples" role="group" aria-label="创作示例"><button type="button" data-prompt="做一个橙色慢速贪食蛇">橙色贪食蛇</button><button type="button" data-prompt="做一个专注5分钟计时器">专注 5 分钟</button><button type="button" data-prompt="做一个像素宠">像素宠</button><button type="button" data-prompt="做一个签名">个性签名</button></div>
             <details class="template-guide"><summary>支持哪些输入与修改？</summary><p>仅支持贪食蛇、坦克、飞机、赛车、像素宠、光点画板、专注、签名、表情（也支持场景英文名）。可加橙色 / 绿色 / 蓝色 / 粉色，慢速 / 中速 / 快速，专注 1–60 分钟。签名文字在下方编辑。其他需求明确不支持；不模拟任意应用生成。</p></details>
             <p id="template-boundary" class="fine-print">本地模板匹配，不调用 AI、不执行 Lua、不请求网络。画面与设备实现不保证一致。</p>
             <button class="primary generate-button" id="generate" type="submit">生成一件作品 <span aria-hidden="true">↗</span></button>

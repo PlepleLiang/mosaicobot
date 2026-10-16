@@ -55,7 +55,7 @@
   function defaultWork(scene) { return {scene,color:colors[0],speed:2,minutes:5,text:'今天也有光'}; }
   function showScene(id, start=false) { screen.load(defaultWork(id)); if(start) screen.start(); $('mosaico-screen').focus({preventScroll:true}); $('exhibit').scrollIntoView({behavior:'auto',block:'start'}); }
   const forms = {
-    back:['贴近日常，也表达自己。','手机背面的独立方屏。表情、签名、光点与专注，让背面也有自己的语言。'],
+    back:['贴近日常，也表达自己。','正面手机与独立方屏按原型尺寸并列展示；背贴是使用概念，非缩小版附件或磁吸承诺。'],
     game:['手机负责控制，方屏负责游戏。','方屏在上，横屏手机手柄在下。操作同一份游戏状态，不是手机投屏。'],
     pendant:['挂在身边，带一点自己的世界。','手绳连接手机或背包的挂点。像素宠、光点画板或专注时刻，随你一起出发。']
   };
@@ -80,8 +80,8 @@
   catalog.forEach((scene,i)=>{
     const button=document.createElement('button'); button.className='scene-card'; button.dataset.scene=scene.id; button.setAttribute('aria-pressed',String(scene.id==='expression'));
     const icon=document.createElement('span'); icon.className='scene-icon'; icon.setAttribute('aria-hidden','true');
-    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 48 48');
-    const path=document.createElementNS(svg.namespaceURI,'path'); path.setAttribute('d',scene.icon);svg.append(path);icon.append(svg);
+    const canvas=document.createElement('canvas');canvas.width=480;canvas.height=480;
+    const miniature=new Screen(canvas,null,false);miniature.load({...defaultWork(scene.id),color:colors[i%colors.length]});icon.append(canvas);
     const description=document.createElement('span'),number=document.createElement('span'),name=document.createElement('strong'),summary=document.createElement('span');
     number.className='scene-number';number.textContent=`${String(i+1).padStart(2,'0')} / ${scene.id.toUpperCase()}`;
     name.textContent=scene.name;summary.className='scene-summary';summary.textContent=scene.summary;description.append(number,name,summary);button.append(icon,description);
