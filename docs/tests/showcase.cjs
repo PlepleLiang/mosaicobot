@@ -46,7 +46,8 @@ const {pathToFileURL}=require('node:url');
   const saved=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('mosaicobot.showcase.works.v1')||'[]'));
   const confirm=async value=>{
     await page.evaluate(()=>{__showcase.closed=false;document.querySelector('#confirm-dialog').addEventListener('close',()=>{__showcase.closed=true;},{once:true});});
-    await page.locator('#confirm-dialog button[value="'+value+'"]').click();
+    if(value==='escape')await page.keyboard.press('Escape');
+    else await page.locator('#confirm-dialog button[value="'+value+'"]').click();
     await page.waitForFunction(()=>__showcase.closed);
   };
   try{
@@ -120,7 +121,7 @@ const {pathToFileURL}=require('node:url');
     await page.reload();await page.waitForFunction(()=>window.__showcase?.screen);
     check(JSON.stringify(await saved())===versions&&await page.locator('.work-item').count()===2,'saved versions survive reload');
     check(await page.locator('#device-stage').getAttribute('data-scene')==='expression'&&await page.locator('#device-stage').getAttribute('data-phase')==='idle'&&await page.locator('#preview-stage').getAttribute('data-phase')==='empty','reload restores neither draft nor deployed run');
-    await page.locator('.work-item').last().locator('button').click();
+    await page.locator('.work-item').last().locator('button').first().click();
     check(await page.locator('#draft-version').innerText()==='V01'&&await page.locator('#work-color').inputValue()==='#ff6b35'&&await page.evaluate(()=>__showcase.preview.work.version===1&&__showcase.preview.phase==='running'),'stored V1 reopens with original parameters and starts preview');
     await shot('03-reloaded-versions');
     // 6. Both independent exhibits, four widths, three forms and both mounts.
@@ -142,10 +143,15 @@ const {pathToFileURL}=require('node:url');
             const overflow=[...document.querySelectorAll('.exhibit-panel,.studio-grid,.creation-panel,.works-panel,.scene-library,.screen-console')].filter(node=>node.scrollWidth>node.clientWidth+1).map(node=>node.className);
             const blocked=[...stage.querySelectorAll('[data-input]')].filter(visible).filter(node=>{const r=node.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return r.width<44||r.height<44||!node.contains(hit);}).map(node=>node.dataset.input);
             const square=stage.querySelector('.mosaico-shell').getBoundingClientRect(),phone=stage.querySelector('.phone-shell').getBoundingClientRect();
-            return {clipped,overflow,blocked,pageFits:document.documentElement.scrollWidth<=innerWidth+1,stacked:stage.dataset.form!=='game'||square.bottom+16<=phone.top&&phone.width>phone.height&&Math.abs(square.width-square.height)<1};
+            const shell=stage.querySelector('.mosaico-shell'),display=shell.querySelector('canvas:not([hidden]),.preview-empty:not([hidden])'),bezel=getComputedStyle(display);
+            const frame=getComputedStyle(stage.querySelector('.phone-shell')),ui=getComputedStyle(stage.querySelector('.phone-controller'));
+            const product=getComputedStyle(shell).borderRadius==='12%'&&bezel.borderRadius==='10%'&&Math.abs(parseFloat(bezel.marginLeft)/shell.clientWidth-.0225)<.001&&Math.abs(parseFloat(bezel.marginTop)-parseFloat(bezel.marginLeft))<.1&&frame.backgroundColor==='rgb(53, 56, 51)'&&frame.borderTopColor==='rgb(88, 92, 85)'&&(stage.dataset.form!=='game'||ui.backgroundColor==='rgb(255, 255, 255)'&&ui.borderRadius==='35px'&&stage.querySelector('.phone-system-bar').getClientRects().length&&stage.querySelector('.phone-camera-hole').getClientRects().length&&stage.querySelector('.phone-app-nav').getClientRects().length)&&(stage.dataset.form!=='back'||ui.display==='none'&&stage.querySelector('.phone-cameras').getClientRects().length);
+            const nav=stage.querySelector('.phone-app-nav'),navFits=stage.dataset.form!=='game'||nav.getBoundingClientRect().bottom<=stage.querySelector('.phone-controller').getBoundingClientRect().bottom+.5;
+            return {product:!!product&&navFits,clipped,overflow,blocked,pageFits:document.documentElement.scrollWidth<=innerWidth+1,stacked:stage.dataset.form!=='game'||square.bottom+16<=phone.top&&phone.width>phone.height&&Math.abs(square.width-square.height)<1};
           },stageId);
-          check(layout.pageFits&&layout.stacked&&!layout.clipped.length&&!layout.overflow.length&&!layout.blocked.length,'layout '+width+' '+stageId+' '+form+'/'+mount+' '+JSON.stringify(layout));
+          check(layout.product&&layout.pageFits&&layout.stacked&&!layout.clipped.length&&!layout.overflow.length&&!layout.blocked.length,'layout '+width+' '+stageId+' '+form+'/'+mount+' '+JSON.stringify(layout));
           await shot('layout-'+width+'-'+stageId+'-'+form+(form==='pendant'?'-'+mount:''));
+          await page.locator('#'+stageId).screenshot({path:path.join(screenshots,'device-'+width+'-'+stageId+'-'+form+(form==='pendant'?'-'+mount:'')+'.png')});
         }
       }
     }
@@ -182,8 +188,7 @@ const {pathToFileURL}=require('node:url');
     await page.locator('#mosaico-screen').focus();await page.keyboard.down('ArrowLeft');
     await page.locator('#discard-work').click();
     check(await neutral()&&await page.locator('#device-stage').getAttribute('data-phase')==='running','modal clears input without pausing');
-    await page.keyboard.up('ArrowLeft');await page.keyboard.press('Escape');
-    await page.waitForFunction(()=>!document.querySelector('#confirm-dialog').open);
+    await page.keyboard.up('ArrowLeft');await confirm('escape');
     check(await page.locator('#draft-panel').isVisible()&&await neutral(),'Escape cancels dialog without discarding version');
     await page.locator('#intent').fill(' ');await resetEvents();await page.keyboard.press('Space');
     check(await page.evaluate(()=>__showcase.events.length===0),'typing in intent never controls game');
@@ -302,6 +307,41 @@ const {pathToFileURL}=require('node:url');
       await shot('preview-'+id);await discard();
     }
     check((await saved()).length===2&&await page.locator('#preview-empty').isVisible(),'discard retains saved versions and clears draft');
+    // 11. Per-version deletion, native cancellation, focus, persistence and independent drafts/runs.
+    await page.setViewportSize({width:1440,height:1050});
+    const row=id=>page.locator('.work-item[data-work="'+id+'"]'),remove=id=>row(id).getByRole('button',{name:/^删除/});
+    const deleteVersions=await saved(),v2=deleteVersions[0],v1=deleteVersions[1];
+    await row(v2.id).getByRole('button',{name:/^打开/}).click();
+    await page.locator('#deploy-work').click();await confirm('confirm');
+    const running=await page.evaluate(()=>JSON.stringify(__showcase.screen.work));
+    await remove(v2.id).click();
+    check(await page.locator('#confirm-dialog').evaluate(n=>n.open)&&await page.locator('#confirm-dialog button[value="cancel"]').evaluate(n=>n===document.activeElement)&&(await page.locator('#dialog-description').innerText()).includes('删除本地保存不停止运行'),'delete uses native modal, explicit warning and cancel autofocus');
+    await confirm('cancel');
+    check(JSON.stringify(await saved())===JSON.stringify(deleteVersions)&&await remove(v2.id).evaluate(n=>n===document.activeElement)&&await page.locator('#draft-panel').isVisible(),'explicit cancel preserves versions, preview and trigger focus');
+    await remove(v2.id).click();await confirm('escape');
+    check(JSON.stringify(await saved())===JSON.stringify(deleteVersions)&&await remove(v2.id).evaluate(n=>n===document.activeElement),'Escape also cancels deletion and restores focus');
+    await remove(v2.id).click();await confirm('confirm');
+    check((await saved()).length===1&&JSON.stringify((await saved())[0])===JSON.stringify(v1)&&await page.locator('#works-count').innerText()==='1','confirmed delete removes only selected version and persists count');
+    check(await page.locator('#draft-panel').isHidden()&&await page.locator('#preview-empty').isVisible()&&await page.locator('#deploy-work').isDisabled()&&await page.locator('#preview-stage').getAttribute('data-phase')==='empty','deleting current saved draft clears preview and disables redeployment');
+    check(await page.evaluate(()=>JSON.stringify(__showcase.screen.work))===running&&await page.locator('#device-stage').getAttribute('data-phase')==='running','deleting deployed saved version leaves top snapshot running');
+    check(await row(v1.id).getByRole('button',{name:/^打开/}).evaluate(n=>n===document.activeElement&&n.isConnected),'deleted row focus recovers to neighboring open button');
+    await shot('delete-current-version');await page.reload();await page.waitForFunction(()=>window.__showcase?.screen);
+    check((await saved()).length===1&&await row(v2.id).count()===0&&await row(v1.id).count()===1,'deleted version stays absent after reload');
+    await page.locator('#intent').fill('signature');await page.locator('#generate').click();await page.locator('#work-text').fill('未保存的独立草稿');
+    const draft=await page.evaluate(()=>JSON.stringify(__showcase.preview.work));
+    await remove(v1.id).click();await confirm('confirm');
+    check((await saved()).length===0&&await page.locator('#works-count').innerText()==='0'&&await page.locator('.empty-works').isVisible(),'last version deletion yields empty collection');
+    check(await page.evaluate(()=>JSON.stringify(__showcase.preview.work))===draft&&await page.locator('#work-text').inputValue()==='未保存的独立草稿'&&await page.locator('#preview-stage').getAttribute('data-phase')==='running','unrelated unsaved draft is untouched by deletion');
+    check(await page.locator('#works-title').evaluate(n=>n===document.activeElement&&n.isConnected),'empty-list deletion restores focus to stable title');
+    await shot('delete-last-unsaved-preserved');await page.reload();await page.waitForFunction(()=>window.__showcase?.screen);
+    check((await saved()).length===0&&await page.locator('.work-item').count()===0,'empty collection persists through reload');
+    await page.locator('#intent').fill('expression');await page.locator('#generate').click();await page.locator('#save-work').click();
+    const fallback=(await saved())[0];
+    await page.evaluate(()=>{Storage.prototype.setItem=function(){throw new DOMException('Full','QuotaExceededError');};});
+    await remove(fallback.id).click();await confirm('confirm');
+    check(await page.locator('.work-item').count()===0&&(await page.locator('#storage-status').innerText()).includes('本地保存失败')&&(await page.locator('#creation-status').innerText()).includes('删除仅在本次会话生效')&&await page.locator('#works-title').evaluate(n=>n===document.activeElement),'storage failure deletes in-session with honest notice and stable focus');
+    await page.reload();await page.waitForFunction(()=>window.__showcase?.screen);
+    check(await row(fallback.id).count()===1,'failed persistence does not claim disk deletion; reload restores stored version');
     check(errors.length===0,'no JavaScript errors '+JSON.stringify(errors));
     check(external.length===0,'no external requests '+JSON.stringify(external));
     check(failedRequests.length===0,'no failed assets '+JSON.stringify(failedRequests));

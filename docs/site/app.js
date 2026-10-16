@@ -127,7 +127,9 @@
   }
   $('confirm-dialog').addEventListener('close',()=>{
     const action=confirmation;confirmation=null;if($('confirm-dialog').returnValue==='confirm') action?.();
-    if(restoreFocus?.isConnected) restoreFocus.focus({ preventScroll:true });
+    if(restoreFocus?.isConnected && restoreFocus.getClientRects().length) restoreFocus.focus({ preventScroll:true });
+    else $('works-title').focus({ preventScroll:true });
+    restoreFocus=null;
   });
   const aliases=[['snake',/贪食蛇|snake/gi],['tank',/坦克(?:守线)?|tank/gi],['flight',/像素飞行|飞机|飞行|flight/gi],['racer',/口袋赛车|赛车|racer/gi],['pixelpet',/像素宠|pixelpet/gi],['lightboard',/光点画板|像素画板|画板|lightboard/gi],['focus',/专注(?:时刻|计时器)?|focus/gi],['signature',/个性签名|签名|signature/gi],['expression',/像素表情|表情|expression/gi]];
   function parseIntent(input) {
@@ -150,7 +152,7 @@
     state.draft={...work,id:`work-${Date.now().toString(36)}-${(++serial).toString(36)}`,version,savedAt:''};renderDraft();renderPreview();
   }
   function renderDraft() {
-    const work=state.draft;$('draft-panel').hidden=!work;if(!work)return;
+    const work=state.draft;$('draft-panel').hidden=!work;if(!work){$('deploy-work').disabled=true;return;}
     $('draft-title').textContent=scenes.get(work.scene).name;$('draft-version').textContent=`V${String(work.version).padStart(2,'0')}`;
     $('work-color').value=work.color;$('work-speed').value=work.speed;$('work-minutes').value=work.minutes;$('work-text').value=work.text;
     $('work-color').disabled=false;$('work-speed').disabled=!games.has(work.scene);$('work-minutes').disabled=work.scene!=='focus';$('work-text').disabled=work.scene!=='signature';
@@ -201,6 +203,17 @@
     });
   }
   $('deploy-work').addEventListener('click',()=>requestDeploy(state.draft));
+  function requestDelete(work) {
+    confirmAction('删除这个保存版本？',`${scenes.get(work.scene).name} · V${work.version}。删除后无法恢复；删除本地保存不停止运行。若此版本正在草稿区打开，草稿预览也会清空。`,()=>{
+      const index=state.works.findIndex(w=>w.id===work.id);
+      if(index<0)return;
+      state.works.splice(index,1);persist();renderWorks();
+      const current=state.draft?.id===work.id;
+      if(current){state.draft=null;renderDraft();renderPreview();}
+      feedback(`已删除 ${scenes.get(work.scene).name} V${work.version}。${current?'草稿预览已清空。':''}${state.storage?'':'本地存储不可用，删除仅在本次会话生效。'}删除本地保存不停止运行。`,current?'empty':state.creation);
+      restoreFocus=$('works-list').children[Math.min(index,state.works.length-1)]?.querySelector('button') || $('works-title');
+    });
+  }
   function renderWorks() {
     const list=$('works-list');list.replaceChildren();$('works-count').textContent=state.works.length;
     if(!state.works.length){const empty=document.createElement('p');empty.className='empty-works';empty.textContent='这里将留下你做过的版本。从一个小想法开始。';list.append(empty);return;}
@@ -213,7 +226,11 @@
         if(state.draft&&!state.draft.savedAt){feedback('先保存或放弃当前草稿，再打开其他版本。');return;}
         state.draft={...work};renderDraft();renderPreview();feedback(`已打开 V${work.version}。确认部署才会替换方屏，也可以修改为新版本。`,'saved');
         $('draft-panel').scrollIntoView({behavior:'auto',block:'center'});$('deploy-work').focus({preventScroll:true});
-      });info.append(title,detail);row.append(info,open);list.append(row);
+      });
+      const remove=document.createElement('button'),actions=document.createElement('div');actions.className='work-actions';
+      remove.textContent='删除';remove.setAttribute('aria-label',`删除${scenes.get(work.scene).name}版本 ${work.version}`);
+      remove.addEventListener('click',()=>requestDelete(work));
+      info.append(title,detail);actions.append(open,remove);row.append(info,actions);list.append(row);
     });
   }
   renderWorks();renderPreview();$('tool-controls').hidden=true;
